@@ -20,7 +20,8 @@
 *.dll
 
 # Folders
-Data/
+Data/additional_data/
+Data/tcrs_wild_mice/
 Results/
 Writing/
 Administrative/
