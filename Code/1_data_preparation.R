@@ -1,55 +1,60 @@
-####initial code####
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+## Project and code information ------------------------------------------------
+##
+## Project: Wild Mouse TCR
+##
+## Purpose of script: Prepare data for analysis
+##
+## Author: Jacob Cohen
+##
+## Date Created: 2025-05-09
+##
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+## Clear workspace -------------------------------------------------------------
+message("Clear workspace")
+
 rm(list=ls())
 
-#set working directory
-#setwd("O:/Documents/Empirical/Wild_mouse_tcr/Data/tcrs_wild_mice/")
-setwd("~/Documents/Liverpool_PhD/Empirical/Wild_mouse_tcr/Data/tcrs_wild_mice/")
 
-##load necessary packages
-library(immunarch)
-library(stringr)
-library(igraph)
-library(ggplot2)
-library(showtext)
+## Load packages ---------------------------------------------------------------
+message("Load packages")
+
+packages <- c('here', 'ggplot2', 'immunarch', 'stringr', 'igraph', 'showtext', 'purrr', 'dplyr', 'tidyr', 'vegan')
+lapply(packages, library, character.only = TRUE)
+
+#additional code for showtext package
 font_add(family = "Calibri", regular = "C:/Windows/Fonts/calibri.ttf")
 showtext_auto()
 showtext_opts(dpi = 300)
 
-####USING IMMUNARCH PACKAGE####
-#reads in data
-#immdata.cd4a <- repLoad("./CD4_alpha/")
-#plots public tcrs
-#imm.rep.cd4a <- repOverlap(immdata.cd4a$data)
+## Load data -------------------------------------------------------------------
+message("Load data")
 
-####Without immunarch####
 ##read in mouse metadata file
-mouse.data <- read.csv("../Mouse_metadata_tcr_mice_Jacob.csv", header = TRUE)
+mouse.data <- read.csv(here("Data", "Mouse_metadata_tcr_mice_Jacob.csv"), header = TRUE)
 
 ##read in all .tsv files
-cd4a.files = list.files(path = "./CD4_alpha/", pattern = "_CD4_1_alpha\\.tsv")
-cd4a.files <- paste0("./CD4_alpha/", cd4a.files)
-cd4b.files = list.files(path = "./CD4_beta/", pattern = "_CD4_1_beta\\.tsv")
-cd4b.files <- paste0("./CD4_beta/", cd4b.files)
-cd8a.files = list.files(path = "./CD8_alpha/", pattern = "_CD8_1_alpha\\.tsv")
-cd8a.files <- paste0("./CD8_alpha/", cd8a.files)
-cd8b.files = list.files(path = "./CD8_beta/", pattern = "_CD8_1_beta\\.tsv")
-cd8b.files <- paste0("./CD8_beta/", cd8b.files)
+cd4a.files = list.files(path = here("Data", "tcrs_wild_mice", "CD4_alpha"), pattern = "_CD4_1_alpha\\.tsv", full.names = TRUE)
+cd4b.files = list.files(path = here("Data", "tcrs_wild_mice", "CD4_beta"), pattern = "_CD4_1_beta\\.tsv", full.names = TRUE)
+cd8a.files = list.files(path = here("Data", "tcrs_wild_mice", "CD8_alpha"), pattern = "_CD8_1_alpha\\.tsv", full.names = TRUE)
+cd8b.files = list.files(path = here("Data", "tcrs_wild_mice", "CD8_beta"), pattern = "_CD8_1_beta\\.tsv", full.names = TRUE)
 
-i <- 1:length(cd4a.files)
-read.in <- function(i, x){
-  dat <- read.table(file = x[[i]], sep = '\t', header = TRUE)
-  return(dat)
+#function for reading in files
+read_in <- function(file){
+  read.table(file, sep = "\t", header = TRUE)
 }
 
-cd4a <- lapply(i, x = cd4a.files, read.in)
-cd4b <- lapply(i, x = cd4b.files, read.in)
-cd8a <- lapply(i, x = cd8a.files, read.in)
-cd8b <- lapply(i, x = cd8b.files, read.in)
+cd4a <- lapply(cd4a.files, read_in)
+cd4b <- lapply(cd4b.files, read_in)
+cd8a <- lapply(cd8a.files, read_in)
+cd8b <- lapply(cd8b.files, read_in)
+
+
+## Add necessary columns to data -----------------------------------------------
+message("Add necessary columns to data")
 
 ##add column for concatenated v_call, j_call, junction_aa
-library(purrr)
-library(dplyr)
-library(tidyr)
 cd4a <- cd4a %>%
   map(~ .x %>%
         unite(full_seq, 'v_call', 'j_call', 'junction_aa', remove = FALSE, sep=""))
@@ -85,19 +90,27 @@ cd4b <- mapply(cbind, cd4b, "ID" = names(cd4b), SIMPLIFY = F)
 cd8a <- mapply(cbind, cd8a, "ID" = names(cd8a), SIMPLIFY = F)
 cd8b <- mapply(cbind, cd8b, "ID" = names(cd8b), SIMPLIFY = F)
 
-####Clean up data####
+
+## Clean data ------------------------------------------------------------------
+message("Clean data")
+
 #remove all rows with FALSE in productive column
 f.rem <- function(i, x){
   rem <- x[[i]] <- x[[i]][which(x[[i]]$productive == TRUE),]
   return(rem)
 }
 
+i <- 1:length(cd4a.files)
+
 cd4a <- lapply(i, x = cd4a, f.rem)
 cd4b <- lapply(i, x = cd4b, f.rem)
 cd8a <- lapply(i, x = cd8a, f.rem)
 cd8b <- lapply(i, x = cd8b, f.rem)
 
-####Extract repertoire size for cd4 alpha and beta####
+## Extract repertoire sizes ----------------------------------------------------
+message("Extract repertoire sizes")
+
+#CD4
 cd4.tcr.count <- c()
 
 for(j in 1:length(cd4a.names)){
@@ -111,7 +124,7 @@ cd4.tcr.count <- as.data.frame(cd4.tcr.count)
 cd4.tcr.count$CD4.alpha.count <- as.numeric(cd4.tcr.count$CD4.alpha.count)
 cd4.tcr.count$CD4.beta.count <- as.numeric(cd4.tcr.count$CD4.beta.count)
 
-####Extract repertoire size for cd8 alpha and beta####
+#CD8
 cd8.tcr.count <- c()
 
 for(j in 1:length(cd8a.names)){
@@ -129,7 +142,6 @@ cd8.tcr.count$CD8.beta.count <- as.numeric(cd8.tcr.count$CD8.beta.count)
 #check IDs are in the same order
 cd4.tcr.count$V1 == mouse.data$ID
 cd8.tcr.count$V1 == mouse.data$ID
-#they are
 
 #add repertoire sizes to mouse.data
 mouse.data$CD4.alpha.count <- cd4.tcr.count$CD4.alpha.count
@@ -137,7 +149,10 @@ mouse.data$CD4.beta.count <- cd4.tcr.count$CD4.beta.count
 mouse.data$CD8.alpha.count <- cd8.tcr.count$CD8.alpha.count
 mouse.data$CD8.beta.count <- cd8.tcr.count$CD8.beta.count
 
-####Get number of unique aa sequences per mouse####
+## Get number of unique amino acid sequences per mouse -------------------------
+message("Get number of unique amino acid sequences per mouse")
+
+#write a function
 unique.calc <- function(i, x){
   un <- length(unique(x[[i]]$full_seq))
   return(un)
@@ -148,13 +163,16 @@ cd4b.unique <- lapply(i, x = cd4b, unique.calc)
 cd8a.unique <- lapply(i, x = cd8a, unique.calc)
 cd8b.unique <- lapply(i, x = cd8b, unique.calc)
 
-##add results to the mouse.data data frame
+#add results to the mouse.data data frame
 mouse.data$CD4.alpha.unique.seq <- unlist(cd4a.unique)
 mouse.data$CD4.beta.unique.seq <- unlist(cd4b.unique)
 mouse.data$CD8.alpha.unique.seq <- unlist(cd8a.unique)
 mouse.data$CD8.beta.unique.seq <- unlist(cd8b.unique)
 
-####Get alpha values from distributions of clone sizes####
+## Get alpha values from distributions of clone sizes --------------------------
+message("Get alpha values from distributions of clone sizes")
+
+#write function
 alpha.val.calc <- function(i, x){
   power.law <- fit_power_law(x[[i]]$duplicate_count, implementation = "plfit")
   return(power.law$alpha)
@@ -165,24 +183,19 @@ cd4b.dist <- lapply(i, x = cd4b, alpha.val.calc)
 cd8a.dist <- lapply(i, x = cd8a, alpha.val.calc)
 cd8b.dist <- lapply(i, x = cd8b, alpha.val.calc)
 
-##add results to the mouse.data data frame
+#add results to the mouse.data data frame
 mouse.data$CD4.alpha.powerlaw <- unlist(cd4a.dist)
 mouse.data$CD4.beta.powerlaw <- unlist(cd4b.dist)
 mouse.data$CD8.alpha.powerlaw <- unlist(cd8a.dist)
 mouse.data$CD8.beta.powerlaw <- unlist(cd8b.dist)
 
-####Get Simpson's diversity measures for each mouse####
+## Get Simpson's diversity measures for each mouse -----------------------------
+message("Get Simpson's diversity measures for each mouse")
 
-###using a package which does the calculation for me
-library(vegan)
-library(tidyr)
-#simpsons.calc <- function(i, x){
-#  simpsons <- diversity(x[[i]][6], index = 'simpson')
-#  return(simpsons)
-#}
-
-#using the formula, rather than a package
-simpsons.calc <- function(i, x, y){
+#function based on the formula, rather than a package
+simpsons.calc <- function(s, i, x, y){
+  #set seed to be able to replicate
+  set.seed(seed = s)
   #first need to downsample the data set
   #make dataframe with rows based on duplicate count
   accordion <- uncount(x[[i]], x[[i]]$duplicate_count)
@@ -194,7 +207,7 @@ simpsons.calc <- function(i, x, y){
     down.sample <- accordion[row.sample, ]
     #then compile back into duplicate counts
     sim <- aggregate(down.sample['duplicate_count'], by = down.sample['full_seq'], sum)
-    #then calculate shannon's diversity index
+    #then calculate simpson's diversity index
     sim$v2 <- (sim$duplicate_count/sum(sim$duplicate_count))^2
     simpsons <- sum(sim$v2)
   }  else{
@@ -203,28 +216,26 @@ simpsons.calc <- function(i, x, y){
   return(simpsons)
 }
 
-cd4a.simp <- lapply(i, x = cd4a, y = 54908, simpsons.calc)
-cd4b.simp <- lapply(i, x = cd4b, y = 58772, simpsons.calc)
-cd8a.simp <- lapply(i, x = cd8a, y = 66881, simpsons.calc)
-cd8b.simp <- lapply(i, x = cd8b, y = 64224, simpsons.calc)
+#apply function
+cd4a.simp <- lapply(s = 45, i, x = cd4a, y = 54908, simpsons.calc)
+cd4b.simp <- lapply(s = 45, i, x = cd4b, y = 58772, simpsons.calc)
+cd8a.simp <- lapply(s = 45, i, x = cd8a, y = 66881, simpsons.calc)
+cd8b.simp <- lapply(s = 45, i, x = cd8b, y = 64224, simpsons.calc)
 
-##add results to the mouse.data data frame
+#add results to the mouse.data data frame
 mouse.data$CD4.alpha.simpsons <- unlist(cd4a.simp)
 mouse.data$CD4.beta.simpsons <- unlist(cd4b.simp)
 mouse.data$CD8.alpha.simpsons <- unlist(cd8a.simp)
 mouse.data$CD8.beta.simpsons <- unlist(cd8b.simp)
 
-##DIVERSITY INDICES COMING UP ALMOST THE SAME FOR ALL OF THEM, WHAT AM I DOING WRONG??
 
-####Get Shannon's diversity measures for each mouse####
-#using vegan
-#shannons.calc <- function(i, x){
-#  shannons <- diversity(x[[i]][6], index = 'shannon')
-#  return(shannons)
-#}
+## Get Shannon's diversity measures for each mouse -----------------------------
+message("Get Shannon's diversity measures for each mouse")
 
-#using the formula, rather than a package
-shannons.calc <- function(i, x, y){
+#function based on the formula, rather than a package
+shannons.calc <- function(s, i, x, y){
+  #set seed to be able to replicate
+  set.seed(seed = s)
   #first need to downsample the data set
   #make dataframe with rows based on duplicate count
   accordion <- uncount(x[[i]], x[[i]]$duplicate_count)
@@ -245,24 +256,29 @@ shannons.calc <- function(i, x, y){
   return(shannons)
 }
 
-cd4a.shan <- lapply(i, x = cd4a, y = 54908, shannons.calc)
-cd4b.shan <- lapply(i, x = cd4b, y = 58772, shannons.calc)
-cd8a.shan <- lapply(i, x = cd8a, y = 66881, shannons.calc)
-cd8b.shan <- lapply(i, x = cd8b, y = 64224, shannons.calc)
+#apply function
+cd4a.shan <- lapply(s = 30, i, x = cd4a, y = 54908, shannons.calc)
+cd4b.shan <- lapply(s = 30, i, x = cd4b, y = 58772, shannons.calc)
+cd8a.shan <- lapply(s = 30, i, x = cd8a, y = 66881, shannons.calc)
+cd8b.shan <- lapply(s = 30, i, x = cd8b, y = 64224, shannons.calc)
 
-##add results to the mouse.data data frame
+#add results to the mouse.data data frame
 mouse.data$CD4.alpha.shannons <- unlist(cd4a.shan)
 mouse.data$CD4.beta.shannons <- unlist(cd4b.shan)
 mouse.data$CD8.alpha.shannons <- unlist(cd8a.shan)
 mouse.data$CD8.beta.shannons <- unlist(cd8b.shan)
 
 ##write csv for mouse.data
-write.csv(mouse.data, "../Mouse_metadata_tcr_mice_Jacob_2.csv", row.names = FALSE)
+write.csv(mouse.data, here("Data" , "Mouse_data.csv"), row.names = FALSE)
 
-####EXACT MATCHES OF SEQUENCES BETWEEN MICE####
+
+## Exact matches of sequences between mice -------------------------------------
+message("Exact matches of sequences between mice")
 
 #function for down-sampling
-down.sample <- function(i, x, y){
+down.sample <- function(s, i, x, y){
+  #set seed to be able to replicate
+  set.seed(seed = s)
   #first need to downsample the data set
   #make dataframe with rows based on duplicate count
   accordion <- uncount(x[[i]], x[[i]]$duplicate_count)
@@ -281,10 +297,11 @@ down.sample <- function(i, x, y){
   return(res)
 }
 
-cd4a.down.sample <- lapply(i, x = cd4a, y = 54908, down.sample)
-cd4b.down.sample <- lapply(i, x = cd4b, y = 58772, down.sample)
-cd8a.down.sample <- lapply(i, x = cd8a, y = 49379, down.sample)
-cd8b.down.sample <- lapply(i, x = cd8b, y = 64224, down.sample)
+#apply function
+cd4a.down.sample <- lapply(s = 94, i, x = cd4a, y = 54908, down.sample)
+cd4b.down.sample <- lapply(s = 94, i, x = cd4b, y = 58772, down.sample)
+cd8a.down.sample <- lapply(s = 94, i, x = cd8a, y = 49379, down.sample)
+cd8b.down.sample <- lapply(s = 94, i, x = cd8b, y = 64224, down.sample)
 
 #create blank matrix
 rep.cd4a <- matrix(nrow = 71, ncol = 71)
@@ -323,12 +340,13 @@ for(l in 1:71){
   }
 }
 
-
+#turn matrices into data frames
 rep.cd4a <- as.data.frame(rep.cd4a)
 rep.cd4b <- as.data.frame(rep.cd4b)
 rep.cd8a <- as.data.frame(rep.cd8a)
 rep.cd8b <- as.data.frame(rep.cd8b)
 
+#add column and row names
 colnames(rep.cd4a) <- cd4a.names
 rownames(rep.cd4a) <- cd4a.names
 colnames(rep.cd4b) <- cd4a.names
@@ -338,12 +356,15 @@ rownames(rep.cd8a) <- cd4a.names
 colnames(rep.cd8b) <- cd4a.names
 rownames(rep.cd8b) <- cd4a.names
 
-write.csv(rep.cd4a, "../CD4_alpha_Repertoire.csv", row.names = TRUE)
-write.csv(rep.cd4b, "../CD4_beta_Repertoire.csv", row.names = TRUE)
-write.csv(rep.cd8a, "../CD8_alpha_Repertoire.csv", row.names = TRUE)
-write.csv(rep.cd8b, "../CD8_beta_Repertoire.csv", row.names = TRUE)
+#write to csv files 
+write.csv(rep.cd4a, here("Data", "CD4_alpha_Repertoire.csv"), row.names = TRUE)
+write.csv(rep.cd4b, here("Data", "CD4_beta_Repertoire.csv"), row.names = TRUE)
+write.csv(rep.cd8a, here("Data", "CD8_alpha_Repertoire.csv"), row.names = TRUE)
+write.csv(rep.cd8b, here("Data", "CD8_beta_Repertoire.csv"), row.names = TRUE)
 
-####Number of times specific TCR sequences appear####
+## Number of times specific TCR sequences appear -------------------------------
+message("Number of times specific TCR sequences appear")
+
 ##get list of only unique aa sequences
 unique.calc2 <- function(i, x){
   un <- unique(x[[i]]$full_seq)
@@ -352,6 +373,7 @@ unique.calc2 <- function(i, x){
   return(un2)
 }
 
+#apply function
 cd4a.unique2 <- lapply(i, x = cd4a, unique.calc2)
 cd4b.unique2 <- lapply(i, x = cd4b, unique.calc2)
 cd8a.unique2 <- lapply(i, x = cd8a, unique.calc2)
@@ -379,12 +401,15 @@ tcr.freq.cd4b <- aggregate(cd4b.full['count'], by = cd4b.full['full_seq'], sum)
 tcr.freq.cd8a <- aggregate(cd8a.full['count'], by = cd8a.full['full_seq'], sum)
 tcr.freq.cd8b <- aggregate(cd8b.full['count'], by = cd8b.full['full_seq'], sum)
 
-write.csv(tcr.freq.cd4a, "../CD4_alpha_TCR_freq.csv", row.names = FALSE)
-write.csv(tcr.freq.cd4b, "../CD4_beta_TCR_freq.csv", row.names = FALSE)
-write.csv(tcr.freq.cd8a, "../CD8_alpha_TCR_freq.csv", row.names = FALSE)
-write.csv(tcr.freq.cd8b, "../CD8_beta_TCR_freq.csv", row.names = FALSE)
+#write to csv files
+write.csv(tcr.freq.cd4a, here("Data", "CD4_alpha_TCR_freq.csv"), row.names = FALSE)
+write.csv(tcr.freq.cd4b, here("Data", "CD4_beta_TCR_freq.csv"), row.names = FALSE)
+write.csv(tcr.freq.cd8a, here("Data", "CD8_alpha_TCR_freq.csv"), row.names = FALSE)
+write.csv(tcr.freq.cd8b, here("Data", "CD8_beta_TCR_freq.csv"), row.names = FALSE)
 
-####Plot repertoire size results####
+## Plot repertoire sizes -------------------------------------------------------
+message("Plot repertoire sizes")
+
 ##CD4 results
 cd4.tcr.plot <- ggplot(data = mouse.data, aes(x = CD4.alpha.count, y = CD4.beta.count, color = Site)) +
   geom_point(size = 2) +
@@ -480,12 +505,14 @@ cd8.tcr.plot.log <- ggplot(data = mouse.data, aes(x = log(CD8.alpha.count), y = 
   coord_cartesian(ylim = c(4, 13), xlim = c(4, 13))
 
 ##Save plots
-ggsave("../../Results/Exploratory_plots/CD4_TCR_count.png", cd4.tcr.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Exploratory_plots/CD4_TCR_count_log.png", cd4.tcr.plot.log, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Exploratory_plots/CD8_TCR_count.png", cd8.tcr.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Exploratory_plots/CD8_TCR_count_log.png", cd8.tcr.plot.log, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Exploratory_plots", "CD4_TCR_count.png"), cd4.tcr.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Exploratory_plots", "CD4_TCR_count_log.png"), cd4.tcr.plot.log, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Exploratory_plots", "CD8_TCR_count.png"), cd8.tcr.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Exploratory_plots", "CD8_TCR_count_log.png"), cd8.tcr.plot.log, bg = "transparent", units = "cm", width = 30, height = 20)
 
-####Plot alpha coefficient against mouse age####
+## Plot alpha coefficient against mouse age ------------------------------------
+message("Plot alpha coefficient against mouse age")
+
 CD4.alpha.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD4.alpha.powerlaw, color = Site)) +
   geom_point(size = 4) +
   scale_x_continuous(name = "Age (days)") +
@@ -578,7 +605,9 @@ CD8.beta.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD8.be
     legend.key.width= unit(1, 'cm')) +
   coord_cartesian(ylim = c(0, 6), xlim = c(0, 350))
 
-##PLOT histogram for mouse N22 (oldest mouse)
+## Plot histogram for two individual mice (N22, N16) ---------------------------
+message("Plot histogram for two individual mice (N22, N16)")
+
 cd4a.n22 <- ggplot(data = cd4a[[27]], aes(x = duplicate_count)) +
   geom_histogram(bins = 50, color = "black", fill = "white") +
   scale_y_log10(name = "Frequency (Log)") +
@@ -660,7 +689,7 @@ cd8b.n16 <- ggplot(data = cd8b[[21]], aes(x = duplicate_count)) +
     panel.grid.minor = element_blank())
 
 #Save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_N22_duplicatecount_histogram.png", cd4a.n22, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_N22_duplicatecount_histogram.png", cd4b.n22, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_N16_duplicatecount_histogram.png", cd8a.n16, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_N16_duplicatecount_histogram.png", cd8b.n16, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "CD4_alpha_N22_duplicatecount_histogram.png"), cd4a.n22, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "CD4_beta_N22_duplicatecount_histogram.png"), cd4b.n22, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "CD8_alpha_N16_duplicatecount_histogram.png"), cd8a.n16, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "CD8_beta_N16_duplicatecount_histogram.png"), cd8b.n16, bg = "transparent", units = "cm", width = 30, height = 23)

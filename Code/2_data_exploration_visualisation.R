@@ -1,33 +1,62 @@
-####initial code####
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+## Project and code information ------------------------------------------------
+##
+## Project: Wild Mouse TCR
+##
+## Purpose of script: Explore and visualise data
+##
+## Author: Jacob Cohen
+##
+## Date Created: 2025-05-09
+##
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+## Clear workspace -------------------------------------------------------------
+message("Clear workspace")
+
 rm(list=ls())
 
-#set working directory
-setwd("~/Documents/Liverpool_PhD/Empirical/Wild_mouse_tcr/Data/tcrs_wild_mice/")
 
-##load necessary packages
-library(immunarch) #no
-library(stringr)
-library(igraph) #no
-library(ggplot2) #yes
-library(showtext) #yes
-font_add(family = "Calibri", regular = "~/Library/Fonts/Calibri.ttf", bold = "~/Library/Fonts/Calibrib.ttf")
+## Load packages ---------------------------------------------------------------
+message("Load packages")
+
+packages <- c('here', 'ggplot2', 'stringr', 'ggbeeswarm', 'emmeans', 'showtext',
+              'DHARMa', 'dplyr', 'tidyr', 'vegan', 'ggpubr', 'gplots', 'modeest', 'scales')
+lapply(packages, library, character.only = TRUE)
+
+#additional code for showtext package
+font_add(family = "Calibri", regular = "C:/Windows/Fonts/calibri.ttf")
 showtext_auto()
 showtext_opts(dpi = 300)
-library(dplyr)
-library(reshape2) #no
-library(network) #no
-library(sna) #no
-library(GGally) #no
-library(ggbeeswarm) #yes
-library(ggsignif) #no
-library(ggpubr) #no
-library(emmeans) #yes
-library(DHARMa) #yes
-library(lme4) #no
 
-####Read in data####
-##read in mouse metadata file
-mouse.data <- read.csv("../Mouse_metadata_tcr_mice_Jacob_2_rem_final.csv", header = TRUE)
+
+## Load data -------------------------------------------------------------------
+message("Load data")
+
+#read in updated mouse metadata file
+mouse.data <- read.csv(here("Data", "Mouse_data.csv"), header = TRUE)
+
+#read in repertoire data
+rep.cd4a <- read.csv(here("Data", "CD4_alpha_Repertoire.csv"), header = TRUE)
+rep.cd4b <- read.csv(here("Data", "CD4_beta_Repertoire.csv"), header = TRUE)
+rep.cd8a <- read.csv(here("Data", "CD8_alpha_Repertoire.csv"), header = TRUE)
+rep.cd8b <- read.csv(here("Data", "CD8_beta_Repertoire.csv"), header = TRUE)
+
+#read in TCR frequency data
+tcr.cd4a <- read.csv(here("Data", "CD4_alpha_TCR_freq.csv"), header = TRUE)
+tcr.cd4b <- read.csv(here("Data", "CD4_beta_TCR_freq.csv"), header = TRUE)
+tcr.cd8a <- read.csv(here("Data", "CD8_alpha_TCR_freq.csv"), header = TRUE)
+tcr.cd8b <- read.csv(here("Data", "CD8_beta_TCR_freq.csv"), header = TRUE)
+
+#read in PCOA data
+share.cd4a <- read.csv(here("Data", "CD4_alpha_Repertoire_PCOA.csv"), header = TRUE)
+share.cd4b <- read.csv(here("Data", "CD4_beta_Repertoire_PCOA.csv"), header = TRUE)
+share.cd8a <- read.csv(here("Data", "CD8_alpha_Repertoire_PCOA.csv"), header = TRUE)
+share.cd8b <- read.csv(here("Data", "CD8_beta_Repertoire_PCOA.csv"), header = TRUE)
+
+
+## Clean data ------------------------------------------------------------------
+message("Clean data")
 
 #keep version which includes the lab mice
 mouse.data.lab <- mouse.data
@@ -35,19 +64,6 @@ mouse.data.lab <- mouse.data
 #use version without the lab mice
 mouse.data <- mouse.data[-c(1:6),]
 
-#read in repertoire data
-rep.cd4a <- read.csv("../CD4_alpha_Repertoire.csv", header = TRUE)
-rep.cd4b <- read.csv("../CD4_beta_Repertoire.csv", header = TRUE)
-rep.cd8a <- read.csv("../CD8_alpha_Repertoire.csv", header = TRUE)
-rep.cd8b <- read.csv("../CD8_beta_Repertoire.csv", header = TRUE)
-
-#read in TCR frequency data
-tcr.cd4a <- read.csv("../CD4_alpha_TCR_freq.csv", header = TRUE)
-tcr.cd4b <- read.csv("../CD4_beta_TCR_freq.csv", header = TRUE)
-tcr.cd8a <- read.csv("../CD8_alpha_TCR_freq.csv", header = TRUE)
-tcr.cd8b <- read.csv("../CD8_beta_TCR_freq.csv", header = TRUE)
-
-####Clean up data####
 #remove unneeded mice from repertoire data
 rep.cd4a <- subset(rep.cd4a, select = -c(N63, N42, N24, N01, N27, N11, N12, N09, N35),
                    !(rep.cd4a$X %in% c("N63", "N42", "N24", "N01", "N27", "N11", "N12", "N09", "N35")))
@@ -79,27 +95,21 @@ rownames(heat.cd8b) <- heat.cd8b[, 1]
 heat.cd8b <- heat.cd8b[, -1]
 heat.cd8b <- as.matrix(heat.cd8b)
 
-#change from matrix format to long format
-cd4a.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd4a)[,-1],
-                                              rep.cd4a$X))
-cd4b.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd4b)[,-1],
-                                              rep.cd4b$X))
-cd8a.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8a)[,-1],
-                                              rep.cd8a$X))
-cd8b.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8b)[,-1],
-                                              rep.cd8b$X))
+# #change from matrix format to long format
+# cd4a.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd4a)[,-1],
+#                                               rep.cd4a$X))
+# cd4b.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd4b)[,-1],
+#                                               rep.cd4b$X))
+# cd8a.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8a)[,-1],
+#                                               rep.cd8a$X))
+# cd8b.net <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8b)[,-1],
+#                                               rep.cd8b$X))
 
-##get mouse IDs
+#get mouse IDs
 cd4.names <- rep.cd4a$X
 cd8.names <- rep.cd8a$X
 
-#save shared repertoire data for pcoa
-#write.csv(rep.cd4a, "../CD4_alpha_Repertoire_PCOA.csv", row.names = TRUE)
-#write.csv(rep.cd4b, "../CD4_beta_Repertoire_PCOA.csv", row.names = TRUE)
-#write.csv(rep.cd8a, "../CD8_alpha_Repertoire_PCOA.csv", row.names = TRUE)
-#write.csv(rep.cd8b, "../CD8_beta_Repertoire_PCOA.csv", row.names = TRUE)
-
-##drop mouse IDs from the heatmap data
+#drop mouse IDs from the heatmap data
 rep.cd4a$X <- 1:62
 colnames(rep.cd4a) <- c("X", 1:62)
 rep.cd4b$X <- 1:62
@@ -119,18 +129,26 @@ rep.cd8a.long <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8a)[,-1],
 rep.cd8b.long <- as.data.frame.table(`row.names<-`(as.matrix(rep.cd8b)[,-1],
                                                    rep.cd8b$X))
 
+#remove unneeded data
+rm(rep.cd4a, rep.cd4b, rep.cd8a, rep.cd8b)
+
+
+## Calculate TCR repertoire richness -------------------------------------------
+message("Calculate TCR repertoire richness")
+
 ##add columns for unique seq/repertoire size
 mouse.data$CD4.alpha.unique.div.rep <- mouse.data$CD4.alpha.unique.seq / mouse.data$CD4.alpha.count
 mouse.data$CD4.beta.unique.div.rep <- mouse.data$CD4.beta.unique.seq / mouse.data$CD4.beta.count
 mouse.data$CD8.alpha.unique.div.rep <- mouse.data$CD8.alpha.unique.seq / mouse.data$CD8.alpha.count
 mouse.data$CD8.beta.unique.div.rep <- mouse.data$CD8.beta.unique.seq / mouse.data$CD8.beta.count
 
-##data for unique unique seq/repertoire size
+#data for unique unique seq/repertoire size
 unique.data <- as.data.frame(rbind(cbind("cd4a", mouse.data$CD4.alpha.unique.div.rep, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex),
                                    cbind("cd4b", mouse.data$CD4.beta.unique.div.rep, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex),
                                    cbind("cd8a", mouse.data$CD8.alpha.unique.div.rep, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex),
                                    cbind("cd8b", mouse.data$CD8.beta.unique.div.rep, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex)))
 
+#adjust structure of the data
 colnames(unique.data) <- c("type", "value", "age", "id", "site", "sex")
 unique.data$type <- as.factor(unique.data$type)
 unique.data$value <- as.numeric(unique.data$value)
@@ -139,12 +157,17 @@ unique.data$id <- as.factor(unique.data$id)
 unique.data$site <- as.factor(unique.data$site)
 unique.data$sex <- as.factor(unique.data$sex)
 
+
+## Generate diversity metric data frame ----------------------------------------
+message("Generate diversity metric data frame")
+
 ##data for diversity data analysis with lab mice
 div.data.lab <- as.data.frame(rbind(cbind("cd4a", mouse.data.lab$CD4.alpha.simpsons, mouse.data.lab$CD4.alpha.shannons, mouse.data.lab$Age_days, mouse.data.lab$ID, mouse.data.lab$Site, mouse.data.lab$Sex),
                                     cbind("cd4b", mouse.data.lab$CD4.beta.simpsons, mouse.data.lab$CD4.beta.shannons, mouse.data.lab$Age_days, mouse.data.lab$ID, mouse.data.lab$Site, mouse.data.lab$Sex),
                                     cbind("cd8a", mouse.data.lab$CD8.alpha.simpsons, mouse.data.lab$CD8.alpha.shannons, mouse.data.lab$Age_days, mouse.data.lab$ID, mouse.data.lab$Site, mouse.data.lab$Sex),
                                     cbind("cd8b", mouse.data.lab$CD8.beta.simpsons, mouse.data.lab$CD8.beta.shannons, mouse.data.lab$Age_days, mouse.data.lab$ID, mouse.data.lab$Site, mouse.data.lab$Sex)))
 
+#adjust structure of the data
 colnames(div.data.lab) <- c("type", "simpsons", "shannons", "age", "id", "site", "sex")
 div.data.lab$type <- as.factor(div.data.lab$type)
 div.data.lab$simpsons <- as.numeric(div.data.lab$simpsons)
@@ -160,6 +183,7 @@ div.data <- as.data.frame(rbind(cbind("cd4a", mouse.data$CD4.alpha.simpsons, mou
                                 cbind("cd8a", mouse.data$CD8.alpha.simpsons, mouse.data$CD8.alpha.shannons, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex),
                                 cbind("cd8b", mouse.data$CD8.beta.simpsons, mouse.data$CD8.beta.shannons, mouse.data$Age_days, mouse.data$ID, mouse.data$Site, mouse.data$Sex)))
 
+#adjust structure of the data
 colnames(div.data) <- c("type", "simpsons", "shannons", "age", "id", "site", "sex")
 div.data$type <- as.factor(div.data$type)
 div.data$simpsons <- as.numeric(div.data$simpsons)
@@ -169,11 +193,11 @@ div.data$id <- as.factor(div.data$id)
 div.data$site <- as.factor(div.data$site)
 div.data$sex <- as.factor(div.data$sex)
 
-####Statistical tests of unique seq/repertoire size####
-#data is not normally distributed so using the pairwise wilcoxon test
-pairwise.wilcox.test(as.numeric(unique.data$value), unique.data$type, p.adjust.method = "holm")
 
-##probably need to do this with a glm to correct for differences in sex
+## Statistical tests for TCR repertoire richness -----------------------------------
+message("Statistical tests TCR repertoire richness")
+
+#glm
 unique.mod <- glm(value ~ site + age + type + sex + age*sex, data = unique.data, family = "Gamma")
 summary(unique.mod)
 
@@ -190,21 +214,19 @@ summary(unique.post)
 unique.post2 <- emmeans(unique.mod, specs = pairwise ~ site, weights = "proportional")
 summary(unique.post2)
 
-####Plot unique seq/repertoire size####
+## Plot TCR repertoire richness ------------------------------------------------
+message("Plot TCR repertoire richness")
+
 unique.plot <- ggplot(unique.data, aes(x = type, y = as.numeric(value), color = type)) +
   geom_boxplot(linewidth = 2, outlier.size = 3) +
   scale_x_discrete(name = "", labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta")) +
   scale_y_continuous(name = "TCR richness") +
   geom_bracket(xmin = c(1, 2, 3, 1), xmax = c(2, 3, 4, 4), label = "*", y.position = c(0.55, 0.515, 0.55, 0.6), color = "black", inherit.aes = FALSE,
                size = 1, label.size = 15, tip.length = 0.01, vjust = 0.5) +
-  #stat_compare_means(comparisons = split(t(combn(levels(unique.data$type), 2)), seq(nrow(t(combn(levels(unique.data$type), 2))))), map_signif_level = TRUE, method = "wilcox.test") +
   ggtitle("") +
   guides(color = "none") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -217,107 +239,101 @@ unique.plot <- ggplot(unique.data, aes(x = type, y = as.numeric(value), color = 
     panel.grid.minor = element_blank()) +
   coord_cartesian(ylim = c(0, 0.65))
 
-ggsave("../../Results/Updated_plots/Final_plots/TCR_richness.png", unique.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "TCR_richness.png"), unique.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
-#separate by cd4a/b and cd8a/b
-unique.cd4a.plot <- ggplot(unique.data[which(unique.data$type == "cd4a"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
-  geom_beeswarm(size = 4, cex = 3) +
-  scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
-  scale_y_continuous(name = "TCR repertoire richness") +
-  scale_color_manual(values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 alpha") +
-  guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 0.5))
 
-unique.cd4b.plot <- ggplot(unique.data[which(unique.data$type == "cd4b"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
-  geom_beeswarm(size = 4, cex = 3) +
-  scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
-  scale_y_continuous(name = "TCR repertoire richness") +
-  scale_color_manual(values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 beta") +
-  guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 0.5))
+## Exploratory plots for TCR repertoire richness -------------------------------
+message("Exploratory plots for TCR repertoire richness")
 
-unique.cd8a.plot <- ggplot(unique.data[which(unique.data$type == "cd8a"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
-  geom_beeswarm(size = 4, cex = 3) +
-  scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
-  scale_y_continuous(name = "TCR repertoire richness") +
-  scale_color_manual(values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 alpha") +
-  guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 0.5))
+# unique.cd4a.plot <- ggplot(unique.data[which(unique.data$type == "cd4a"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
+#   geom_beeswarm(size = 4, cex = 3) +
+#   scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
+#   scale_y_continuous(name = "TCR repertoire richness") +
+#   scale_color_manual(values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 alpha") +
+#   guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 0.5))
+# 
+# unique.cd4b.plot <- ggplot(unique.data[which(unique.data$type == "cd4b"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
+#   geom_beeswarm(size = 4, cex = 3) +
+#   scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
+#   scale_y_continuous(name = "TCR repertoire richness") +
+#   scale_color_manual(values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 beta") +
+#   guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 0.5))
+# 
+# unique.cd8a.plot <- ggplot(unique.data[which(unique.data$type == "cd8a"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
+#   geom_beeswarm(size = 4, cex = 3) +
+#   scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
+#   scale_y_continuous(name = "TCR repertoire richness") +
+#   scale_color_manual(values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 alpha") +
+#   guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 0.5))
+# 
+# unique.cd8b.plot <- ggplot(unique.data[which(unique.data$type == "cd8b"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
+#   geom_beeswarm(size = 4, cex = 3) +
+#   scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
+#   scale_y_continuous(name = "TCR repertoire richness") +
+#   scale_color_manual(values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 beta") +
+#   guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 0.5))
+# 
+# ggsave(here("Results", "Updated_plots", "Unique_aa_div_rep_size_cd4a.png"), unique.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Unique_aa_div_rep_size_cd4b.png"), unique.cd4b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Unique_aa_div_rep_size_cd8a.png"), unique.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Unique_aa_div_rep_size_cd8b.png"), unique.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
-unique.cd8b.plot <- ggplot(unique.data[which(unique.data$type == "cd8b"), ], aes(x = site, y = as.numeric(value), color = site, shape = sex)) +
-  geom_beeswarm(size = 4, cex = 3) +
-  scale_x_discrete(name = "", labels = c("Nott.", "Wirral")) +
-  scale_y_continuous(name = "TCR repertoire richness") +
-  scale_color_manual(values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 beta") +
-  guides(color = "none", shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 0.5))
 
-ggsave("../../Results/Updated_plots/Unique_aa_div_rep_size_cd4a.png", unique.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Unique_aa_div_rep_size_cd4b.png", unique.cd4b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Unique_aa_div_rep_size_cd8a.png", unique.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Unique_aa_div_rep_size_cd8b.png", unique.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+## Exploratory plots for powerlaw distribution ---------------------------------
+message("xploratory plots for powerlaw distribution")
 
-####Plot alpha coefficient against mouse age####
 CD4.alpha.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD4.alpha.powerlaw, color = Site)) +
   geom_point(size = 8) +
   scale_x_continuous(name = "Age (days)") +
@@ -327,10 +343,7 @@ CD4.alpha.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD4.a
   guides(color = guide_legend(override.aes = list(size = 6))) +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -355,10 +368,7 @@ CD4.beta.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD4.be
   guides(color = guide_legend(override.aes = list(size = 6))) +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -383,10 +393,7 @@ CD8.alpha.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD8.a
   guides(color = guide_legend(override.aes = list(size = 6))) +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -411,10 +418,7 @@ CD8.beta.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD8.be
   guides(color = guide_legend(override.aes = list(size = 6))) +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -430,11 +434,11 @@ CD8.beta.powerlaw.plot <- ggplot(data = mouse.data, aes(x = Age_days, y = CD8.be
     panel.grid.minor = element_blank()) +
   coord_cartesian(ylim = c(0, 6), xlim = c(0, 350))
 
-#Save plots
-ggsave("../../Results/Updated_plots//CD4_alpha_power_law_coefficient.png", CD4.alpha.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_power_law_coefficient.png", CD4.beta.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_power_law_coefficient.png", CD8.alpha.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_power_law_coefficient.png", CD8.beta.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# #Save plots
+# ggsave(here("Results", "Updated_plots", "CD4_alpha_power_law_coefficient.png"), CD4.alpha.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD4_beta_power_law_coefficient.png"), CD4.beta.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_alpha_power_law_coefficient.png"), CD8.alpha.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_beta_power_law_coefficient.png"), CD8.beta.powerlaw.plot, bg = "transparent", units = "cm", width = 30, height = 23)
 
 #patchwork plots
 cd4.powerlaw.plot <- CD4.alpha.powerlaw.plot + CD4.beta.powerlaw.plot +
@@ -446,31 +450,12 @@ cd8.powerlaw.plot <- CD8.alpha.powerlaw.plot + CD8.beta.powerlaw.plot +
   plot_annotation(theme = theme(plot.tag = element_text(size = 42, face = "bold"), legend.position = "bottom", legend.justification = "left"))
 
 #save patchwork
-ggsave("../../Results/Updated_plots/Final_plots/CD4_powerlaw_plot.png", cd4.powerlaw.plot, bg = "transparent", units = "cm", width = 60, height = 30)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_powerlaw_plot.png", cd8.powerlaw.plot, bg = "transparent", units = "cm", width = 60, height = 30)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_powerlaw_plot.png"), cd4.powerlaw.plot, bg = "transparent", units = "cm", width = 60, height = 30)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_powerlaw_plot.png"), cd8.powerlaw.plot, bg = "transparent", units = "cm", width = 60, height = 30)
 
-####Statistical tests of simpsons diversity####
-##INCLUDING LAB MICE
-##probably need to do this with a glm to correct for differences in sex
-simpsons.mod.lab <- glm(log(1/simpsons) ~ site + age + type + sex + age*sex, data = div.data.lab, family = "gaussian")
-summary(simpsons.mod.lab)
 
-#test fit
-simpsons.output.lab <- simulateResiduals(fittedModel = simpsons.mod.lab)
-plot(simpsons.output.lab)
-#DHARMa says the fit is not great, but better than a gamma distribution (and also has a better AIC)
-
-#Post hoc test for pairwise receptor type comparisons
-simpsons.post.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ type, weights = "proportional")
-summary(simpsons.post.lab)
-
-#Post hoc test for pairwise site comparisons
-simpsons.post2.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ site, weights = "proportional")
-summary(simpsons.post2.lab)
-
-#Post hoc test for pairwise site + type comparisons
-simpsons.post3.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ site + type, weights = "proportional")
-summary(simpsons.post3.lab)
+## Statistical tests for Simpson's diversity -----------------------------------
+message("Statistical tests for Simpson's diversity")
 
 ##EXCLUDING LAB MICE
 simpsons.mod <- glm(log(1/simpsons) ~ site + age + type + sex + age*sex, data = div.data, family = "gaussian")
@@ -493,7 +478,41 @@ summary(simpsons.post2)
 simpsons.post3 <- emmeans(simpsons.mod, specs = pairwise ~ site + type, weights = "proportional")
 summary(simpsons.post3)
 
-####Plot simpsons diversity index####
+#Post hoc test for sex comparison
+simpsons.post4 <- emmeans(simpsons.mod, specs = pairwise ~ sex, weights = "proportional")
+summary(simpsons.post4)
+#marginally non-significant
+
+
+##INCLUDING LAB MICE
+simpsons.mod.lab <- glm(log(1/simpsons) ~ site + age + type + sex + age*sex, data = div.data.lab, family = "gaussian")
+summary(simpsons.mod.lab)
+
+#test fit
+simpsons.output.lab <- simulateResiduals(fittedModel = simpsons.mod.lab)
+plot(simpsons.output.lab)
+#DHARMa says the fit is not great, but better than a gamma distribution (and also has a better AIC)
+
+#Post hoc test for pairwise receptor type comparisons
+simpsons.post.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ type, weights = "proportional")
+summary(simpsons.post.lab)
+
+#Post hoc test for pairwise site comparisons
+simpsons.post2.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ site, weights = "proportional")
+summary(simpsons.post2.lab)
+
+#Post hoc test for pairwise site + type comparisons
+simpsons.post3.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ site + type, weights = "proportional")
+summary(simpsons.post3.lab)
+
+#Post hoc test for sex comparison
+simpsons.post4.lab <- emmeans(simpsons.mod.lab, specs = pairwise ~ sex, weights = "proportional")
+summary(simpsons.post4.lab)
+
+
+## Plot Simpson's diversity ----------------------------------------------------
+message("Plot Simpson's diversity")
+
 ##EXCLUDING LAB MICE
 simpsons.plot <- ggplot(div.data, aes(x = type, y = log(1/simpsons), color = type)) +
   geom_boxplot(linewidth = 2, outlier.size = 3) +
@@ -504,10 +523,7 @@ simpsons.plot <- ggplot(div.data, aes(x = type, y = log(1/simpsons), color = typ
   ggtitle("") +
   guides(color = "none") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -520,266 +536,223 @@ simpsons.plot <- ggplot(div.data, aes(x = type, y = log(1/simpsons), color = typ
     panel.grid.minor = element_blank()) +
   coord_cartesian(ylim = c(5.8, 11.9))
 
-ggsave("../../Results/Updated_plots/Final_plots/Simpsons_diversity.png", simpsons.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Simpsons_diversity.png"), simpsons.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
-##INCLUDING LAB MICE
-simpsons.plot.lab <- ggplot(div.data.lab, aes(x = type, y = log(1/simpsons), color = type)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "", labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta")) +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  geom_bracket(xmin = c(1, 2, 2), xmax = c(3, 3, 4), label = "*", y.position = c(10.1, 10.7, 11.3), color = "black", inherit.aes = FALSE,
-               size = 1, label.size = 15, tip.length = 0.01, vjust = 0.5) +
-  ggtitle("") +
-  guides(color = "none") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(5.8, 11.3))
 
-ggsave("../../Results/Updated_plots/Simpsons_diversity_lab.png", simpsons.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+## Exploratory plots for Simpson's diversity -----------------------------------
+message("Exploratory plots for Simpson's diversity")
 
-##by age
-#simpsons.age.plot <- ggplot(simpsons, aes(x = as.numeric(age), y = log(1/as.numeric(value)), color = type)) +
-#  geom_point(size = 4) +
-#  scale_x_continuous(name = "Age (days)") +
-#  scale_y_continuous(name = "Log(1/Simpson's)") +
-#  ggtitle("") +
-#  scale_color_discrete(labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta"), name = "") +
-#  guides(color = guide_legend(override.aes = list(size = 6))) +
-#  theme_bw() +
-#  theme(#panel.background = element_rect(fill='transparent'),
-#    #plot.background = element_rect(fill='transparent', color=NA),
-#    #legend.background = element_rect(fill='transparent'),
-#    plot.title = element_text(size = 42, family = "Calibri"),
-#    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-#    axis.title = element_text(size = 42, family = "Calibri"),
-#    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-#    axis.text.x = element_text(size = 38, color = "black"),
-#    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-#    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-#    legend.key.height= unit(1, 'cm'),
-#   legend.key.width= unit(1, 'cm'))
+# ##INCLUDING LAB MICE
+# simpsons.plot.lab <- ggplot(div.data.lab, aes(x = type, y = log(1/simpsons), color = type)) +
+#   geom_boxplot(linewidth = 2, outlier.size = 3) +
+#   scale_x_discrete(name = "", labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta")) +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   geom_bracket(xmin = c(1, 2, 2), xmax = c(3, 3, 4), label = "*", y.position = c(10.1, 10.7, 11.3), color = "black", inherit.aes = FALSE,
+#                size = 1, label.size = 15, tip.length = 0.01, vjust = 0.5) +
+#   ggtitle("") +
+#   guides(color = "none") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(5.8, 11.3))
+# 
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_lab.png"), simpsons.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# 
+# #separate by cd4a/b and cd8a/b
+# #EXCLUDING LAB MICE
+# simpsons.age.cd4a.plot <- ggplot(div.data[which(div.data$type == "cd4a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd4b.plot <- ggplot(div.data[which(div.data$type == "cd4b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd8a.plot <- ggplot(div.data[which(div.data$type == "cd8a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd8b.plot <- ggplot(div.data[which(div.data$type == "cd8b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# ##Save plots
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd4a.png"), simpsons.age.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd4b.png"), simpsons.age.cd4b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd8a.png"), simpsons.age.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd8b.png"), simpsons.age.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# 
+# #separate by cd4a/b and cd8a/b
+# #INCLUDING LAB MICE
+# simpsons.age.cd4a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd4b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd8a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# simpsons.age.cd8b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Log(1/Simpson's)") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(6.25, 10.5))
+# 
+# ##Save plots
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd4a_lab.png"), simpsons.age.cd4a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd4b_lab.png"), simpsons.age.cd4b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd8a_lab.png"), simpsons.age.cd8a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Simpsons_diversity_age_cd8b_lab.png"), simpsons.age.cd8b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
 
-#separate by cd4a/b and cd8a/b
-#EXCLUDING LAB MICE
-simpsons.age.cd4a.plot <- ggplot(div.data[which(div.data$type == "cd4a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
 
-simpsons.age.cd4b.plot <- ggplot(div.data[which(div.data$type == "cd4b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
+## Statistical tests for Shannon's diversity -----------------------------------
+message("Statistical test for Shannon's diversity")
 
-simpsons.age.cd8a.plot <- ggplot(div.data[which(div.data$type == "cd8a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-simpsons.age.cd8b.plot <- ggplot(div.data[which(div.data$type == "cd8b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Nott.", "Wirral"), name = "", values = c('#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-##Save plots
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd4a.png", simpsons.age.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd4b.png", simpsons.age.cd4b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd8a.png", simpsons.age.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd8b.png", simpsons.age.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-
-#separate by cd4a/b and cd8a/b
-#INCLUDING LAB MICE
-simpsons.age.cd4a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-simpsons.age.cd4b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-simpsons.age.cd8a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8a"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-simpsons.age.cd8b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8b"), ], aes(x = age, y = log(1/simpsons), color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Log(1/Simpson's)") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(6.25, 10.5))
-
-##Save plots
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd4a_lab.png", simpsons.age.cd4a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd4b_lab.png", simpsons.age.cd4b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd8a_lab.png", simpsons.age.cd8a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Simpsons_diversity_age_cd8b_lab.png", simpsons.age.cd8b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-
-####Statistical tests of shannons diversity####
 ##EXCLUDING LAB MICE
-##probably need to do this with a glm to correct for differences in sex
 shannons.mod <- glm(shannons ~ site + age + type + sex + age*sex, data = div.data, family = "gaussian")
 summary(shannons.mod)
 
 #test fit
 shannons.output <- simulateResiduals(fittedModel = shannons.mod)
 plot(shannons.output)
-#DHARMa says the fit is good and gaussian has a better AIC than a gamma distribution
+#DHARMa says the fit is good
 
 #Post hoc test for pairwise receptor type comparisons
 shannons.post <- emmeans(shannons.mod, specs = pairwise ~ type, weights = "proportional")
@@ -793,15 +766,19 @@ summary(shannons.post2)
 shannons.post3 <- emmeans(shannons.mod, specs = pairwise ~ site + type, weights = "proportional")
 summary(shannons.post3)
 
+#Post hoc test for sex comparison
+shannons.post4 <- emmeans(shannons.mod, specs = pairwise ~ sex, weights = "proportional")
+summary(shannons.post4)
+#marginally non-signficant 
+
 ##INCLUDING LAB MICE
-##probably need to do this with a glm to correct for differences in sex
 shannons.mod.lab <- glm(shannons ~ site + age + type + sex, data = div.data.lab, family = "gaussian")
 summary(shannons.mod.lab)
 
 #test fit
 shannons.output.lab <- simulateResiduals(fittedModel = shannons.mod.lab)
 plot(shannons.output.lab)
-#DHARMa says the fit is good and gaussian has a better AIC than a gamma distribution
+#DHARMa says the fit is good
 
 #Post hoc test for pairwise receptor type comparisons
 shannons.post.lab <- emmeans(shannons.mod.lab, specs = pairwise ~ type, weights = "proportional")
@@ -815,7 +792,15 @@ summary(shannons.post2.lab)
 shannons.post3.lab <- emmeans(shannons.mod.lab, specs = pairwise ~ site + type, weights = "proportional")
 summary(shannons.post3.lab)
 
-####Plot shannons diversity index####
+#Post hoc test for sex comparison
+shannons.post4.lab <- emmeans(shannons.mod.lab, specs = pairwise ~ sex, weights = "proportional")
+summary(shannons.post4.lab)
+#marginally non-signficant 
+
+
+## Plot Shannon's diversity ----------------------------------------------------
+message("Plot Shannon's diversity")
+
 ##EXCLUDING LAB MICE
 shannons.plot <- ggplot(div.data, aes(x = type, y = shannons, color = type)) +
   geom_boxplot(linewidth = 2, outlier.size = 3) +
@@ -826,10 +811,7 @@ shannons.plot <- ggplot(div.data, aes(x = type, y = shannons, color = type)) +
   ggtitle("") +
   guides(color = "none") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -842,58 +824,9 @@ shannons.plot <- ggplot(div.data, aes(x = type, y = shannons, color = type)) +
     panel.grid.minor = element_blank()) +
   coord_cartesian(ylim = c(8, 10.4))
 
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_diversity.png", shannons.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_diversity.png"), shannons.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
 
-##INCLUDING LAB MICE
-shannons.plot.lab <- ggplot(div.data.lab, aes(x = type, y = shannons, color = type)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "", labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta")) +
-  scale_y_continuous(name = "Shannon's") +
-  geom_bracket(xmin = c(1, 2, 3), xmax = c(2, 3, 4), label = "*", y.position = c(10.4, 10.5, 10.6), color = "black", inherit.aes = FALSE,
-               size = 1, label.size = 15, tip.length = 0.01, vjust = 0.5) +
-  ggtitle("") +
-  guides(color = "none") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(8, 10.6))
-
-ggsave("../../Results/Updated_plots/Shannons_diversity_lab.png", shannons.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-
-##by age
-#shannons.age.plot <- ggplot(shannons, aes(x = as.numeric(age), y = as.numeric(value), color = type)) +
-#  geom_point(size = 4) +
-#  scale_x_continuous(name = "Age (days)") +
-#  scale_y_continuous(name = "Shannon's") +
-#  ggtitle("") +
-#  scale_color_discrete(labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta"), name = "") +
-#  guides(color = guide_legend(override.aes = list(size = 6))) +
-#  theme_bw() +
-#  theme(#panel.background = element_rect(fill='transparent'),
-#    #plot.background = element_rect(fill='transparent', color=NA),
-#    #legend.background = element_rect(fill='transparent'),
-#    plot.title = element_text(size = 42, family = "Calibri"),
-#    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-#    axis.title = element_text(size = 42, family = "Calibri"),
-#    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-#    axis.text.x = element_text(size = 38, color = "black"),
-#    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-#    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-#    legend.key.height= unit(1, 'cm'),
-#    legend.key.width= unit(1, 'cm'))
-
-##EXCLUDING LAB MICE
 #separate by cd4a/b and cd8a/b
 shannons.age.cd4a.plot <- ggplot(div.data[which(div.data$type == "cd4a"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
   geom_point(size = 10, alpha = 0.8) +
@@ -904,10 +837,7 @@ shannons.age.cd4a.plot <- ggplot(div.data[which(div.data$type == "cd4a"), ], aes
   ggtitle("") +
   guides(color = guide_legend(order = 1, override.aes = list(size = 10, alpha = 1)), shape = guide_legend(order = 2, override.aes = list(size = 10, fill = "black", alpha = 1))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -932,10 +862,7 @@ shannons.age.cd4b.plot <- ggplot(div.data[which(div.data$type == "cd4b"), ], aes
   ggtitle("") +
   guides(color = guide_legend(order = 1, override.aes = list(size = 10, alpha = 1)), shape = guide_legend(order = 2, override.aes = list(size = 10, fill = "black", alpha = 1))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.text.y = element_blank(),
     axis.title = element_text(size = 42, family = "Calibri"),
@@ -961,10 +888,7 @@ shannons.age.cd4b.plot2 <- ggplot(div.data[which(div.data$type == "cd4b"), ], ae
   ggtitle("") +
   guides(color = guide_legend(order = 1, override.aes = list(size = 10, alpha = 1)), shape = guide_legend(order = 2, override.aes = list(size = 10, fill = "black", alpha = 1))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -989,10 +913,7 @@ shannons.age.cd8a.plot <- ggplot(div.data[which(div.data$type == "cd8a"), ], aes
   ggtitle("") +
   guides(color = guide_legend(order = 1, override.aes = list(size = 10, alpha = 1)), shape = guide_legend(order = 2, override.aes = list(size = 10, fill = "black", alpha = 1))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -1017,10 +938,7 @@ shannons.age.cd8b.plot <- ggplot(div.data[which(div.data$type == "cd8b"), ], aes
   ggtitle("") +
   guides(color = guide_legend(order = 1, override.aes = list(size = 10, alpha = 1)), shape = guide_legend(order = 2, override.aes = list(size = 10, fill = "black", alpha = 1))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.text.y = element_blank(),
     axis.title = element_text(size = 42, family = "Calibri"),
@@ -1038,10 +956,10 @@ shannons.age.cd8b.plot <- ggplot(div.data[which(div.data$type == "cd8b"), ], aes
   coord_cartesian(ylim = c(8, 10.5))
 
 #Save plots
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_diversity_age_cd4a.png", shannons.age.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 30)
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_diversity_age_cd4b.png", shannons.age.cd4b.plot2, bg = "transparent", units = "cm", width = 30, height = 30)
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_diversity_age_cd8a.png", shannons.age.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_diversity_age_cd8b.png", shannons.age.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_diversity_age_cd4a.png"), shannons.age.cd4a.plot, bg = "transparent", units = "cm", width = 30, height = 30)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_diversity_age_cd4b.png"), shannons.age.cd4b.plot2, bg = "transparent", units = "cm", width = 30, height = 30)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_diversity_age_cd8a.png"), shannons.age.cd8a.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_diversity_age_cd8b.png"), shannons.age.cd8b.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
 #patchwork plots
 overall.shannon.plot <- (shannons.age.cd4a.plot + shannons.age.cd4b.plot) / (shannons.age.cd8a.plot + shannons.age.cd8b.plot) +
@@ -1050,367 +968,162 @@ overall.shannon.plot <- (shannons.age.cd4a.plot + shannons.age.cd4b.plot) / (sha
   theme(plot.tag = element_text(size = 42, face = "bold"), legend.position = "bottom", legend.justification = "left")
 
 #save patchwork
-ggsave("../../Results/Updated_plots/Final_plots/Shannons_plot.png", overall.shannon.plot, bg = "transparent", units = "cm", width = 50, height = 50)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Shannons_plot.png"), overall.shannon.plot, bg = "transparent", units = "cm", width = 50, height = 50)
 
-##INCLUDING LAB MICE
-#separate by cd4a/b and cd8a/b
-shannons.age.cd4a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4a"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Shannon's") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(8, 10.5))
+## Exploratory plots for Shannon's diversity -----------------------------------
+message("Exploratory plots for Shannon's diversity")
 
-shannons.age.cd4b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4b"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Shannon's") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD4 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(8, 10.5))
+# ##INCLUDING LAB MICE
+# shannons.plot.lab <- ggplot(div.data.lab, aes(x = type, y = shannons, color = type)) +
+#   geom_boxplot(linewidth = 2, outlier.size = 3) +
+#   scale_x_discrete(name = "", labels = c("CD4 alpha", "CD4 beta", "CD8 alpha", "CD8 beta")) +
+#   scale_y_continuous(name = "Shannon's") +
+#   geom_bracket(xmin = c(1, 2, 3), xmax = c(2, 3, 4), label = "*", y.position = c(10.4, 10.5, 10.6), color = "black", inherit.aes = FALSE,
+#                size = 1, label.size = 15, tip.length = 0.01, vjust = 0.5) +
+#   ggtitle("") +
+#   guides(color = "none") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(8, 10.6))
+# 
+# ggsave(here("Results", "Updated_plots", "Shannons_diversity_lab.png"), shannons.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# 
+# #separate by cd4a/b and cd8a/b
+# shannons.age.cd4a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4a"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Shannon's") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(8, 10.5))
+# 
+# shannons.age.cd4b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd4b"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Shannon's") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD4 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(8, 10.5))
+# 
+# shannons.age.cd8a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8a"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Shannon's") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(8, 10.5))
+# 
+# shannons.age.cd8b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8b"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Age (days)") +
+#   scale_y_continuous(name = "Shannon's") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(values = c("circle", "square"), name = "Sex") +
+#   ggtitle("CD8 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(8, 10.5))
+# 
+# #Save plots
+# ggsave(here("Results", "Updated_plots", "Shannons_diversity_age_cd4a_lab.png"), shannons.age.cd4a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Shannons_diversity_age_cd4b_lab.png"), shannons.age.cd4b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Shannons_diversity_age_cd8a_lab.png"), shannons.age.cd8a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "Shannons_diversity_age_cd8b_lab.png"), shannons.age.cd8b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
 
-shannons.age.cd8a.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8a"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Shannon's") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(8, 10.5))
 
-shannons.age.cd8b.plot.lab <- ggplot(div.data.lab[which(div.data.lab$type == "cd8b"), ], aes(x = age, y = shannons, color = site, shape = sex)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Age (days)") +
-  scale_y_continuous(name = "Shannon's") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(values = c("circle", "square"), name = "Sex") +
-  ggtitle("CD8 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8)), shape = guide_legend(order = 1, override.aes = list(size = 8, fill = "black"))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(8, 10.5))
+## Exploratory plots TCR frequencies -------------------------------------------
+message("Exploratory plots TCR frequencies")
 
-#Save plots
-ggsave("../../Results/Updated_plots/Shannons_diversity_age_cd4a_lab.png", shannons.age.cd4a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Shannons_diversity_age_cd4b_lab.png", shannons.age.cd4b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Shannons_diversity_age_cd8a_lab.png", shannons.age.cd8a.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Shannons_diversity_age_cd8b_lab.png", shannons.age.cd8b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
+# ##CD4 alpha
+# tcr.cd4a.hist <- ggplot(tcr.cd4a, aes(x = count)) +
+#   geom_histogram(binwidth = 1, color = "black", fill = "white") +
+#   scale_x_continuous(name = "No. total repeats") +
+#   scale_y_continuous(name = "Frequency") +
+#   ggtitle("CD4 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
+# 
+# #on a log scale
+# tcr.cd4a.hist2 <- ggplot(tcr.cd4a, aes(x = count)) +
+#   geom_histogram(binwidth = 1, color = "black", fill = "white") +
+#   scale_x_continuous(name = "No. total repeats") +
+#   scale_y_log10(name = "Log10, Frequency") +
+#   ggtitle("CD4 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
 
-####Plot TCR frequencies####
-##CD4 alpha
-tcr.cd4a.hist <- ggplot(tcr.cd4a, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_continuous(name = "Frequency") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
 
-tcr.cd4a.hist2 <- ggplot(tcr.cd4a, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_log10(name = "Log10, Frequency") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-##CD4 beta
-tcr.cd4b.hist <- ggplot(tcr.cd4b, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_continuous(name = "Frequency") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-tcr.cd4b.hist2 <- ggplot(tcr.cd4b, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_log10(name = "Log10, Frequency") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-##CD8 alpha
-tcr.cd8a.hist <- ggplot(tcr.cd8a, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_continuous(name = "Frequency") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-tcr.cd8a.hist2 <- ggplot(tcr.cd8a, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_log10(name = "Log10, Frequency") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-##cd8 beta
-tcr.cd8b.hist <- ggplot(tcr.cd8b, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_continuous(name = "Frequency") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-tcr.cd8b.hist2 <- ggplot(tcr.cd8b, aes(x = count)) +
-  geom_histogram(binwidth = 1, color = "black", fill = "white") +
-  scale_x_continuous(name = "No. total repeats") +
-  scale_y_log10(name = "Log10, Frequency") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-##Save plots
-#ggsave("../../Results/Exploratory_plots/CD4_alpha_tcr_freq.png", tcr.cd4a.hist, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD4_alpha_tcr_freq_log.png", tcr.cd4a.hist2, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD4_beta_tcr_freq.png", tcr.cd4b.hist, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD4_beta_tcr_freq_log.png", tcr.cd4b.hist2, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD8_alpha_tcr_freq.png", tcr.cd8a.hist, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD8_alpha_tcr_freq_log.png", tcr.cd8a.hist2, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD8_beta_tcr_freq.png", tcr.cd8b.hist, bg = "transparent", units = "cm", width = 30, height = 20)
-#ggsave("../../Results/Exploratory_plots/CD8_beta_tcr_freq_log.png", tcr.cd8b.hist2, bg = "transparent", units = "cm", width = 30, height = 20)
-
-####Plot shared aa sequence results####
-cd4a.heatmap <- ggplot(rep.cd4a.long, aes(x = as.numeric(Var1), y = as.numeric(Var2), fill = Freq)) +
-  geom_tile() +
-  scale_x_continuous(name = "", breaks = c(1:62), labels = cd4.names) +
-  scale_y_continuous(name = "", breaks = c(1:62), labels = cd4.names) +
-  scale_fill_gradientn(colours = c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404"), name = "Shared\nsequences", limits = c(100, 6000)) +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 20, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 20, color = "black", angle = 90, vjust = 0.5, hjust = 1),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_fixed()
-
-cd4b.heatmap <- ggplot(rep.cd4b.long, aes(x = as.numeric(Var1), y = as.numeric(Var2), fill = Freq)) +
-  geom_tile() +
-  scale_x_continuous(name = "", breaks = c(1:62), labels = cd4.names) +
-  scale_y_continuous(name = "", breaks = c(1:62), labels = cd4.names) +
-  scale_fill_gradientn(colours = c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404"), name = "Shared\nsequences", limits = c(100, 6000)) +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 20, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 20, color = "black", angle = 90, vjust = 0.5, hjust = 1),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_fixed()
-
-cd8a.heatmap <- ggplot(rep.cd8a.long, aes(x = as.numeric(Var1), y = as.numeric(Var2), fill = Freq)) +
-  geom_tile() +
-  scale_x_continuous(name = "", breaks = c(1:58), labels = cd8.names) +
-  scale_y_continuous(name = "", breaks = c(1:58), labels = cd8.names) +
-  scale_fill_gradientn(colours = c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404"), name = "Shared\nsequences", limits = c(100, 6000)) +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 20, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 20, color = "black", angle = 90, vjust = 0.5, hjust = 1),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_fixed()
-
-cd8b.heatmap <- ggplot(rep.cd8b.long, aes(x = as.numeric(Var1), y = as.numeric(Var2), fill = Freq)) +
-  geom_tile() +
-  scale_x_continuous(name = "", breaks = c(1:58), labels = cd8.names) +
-  scale_y_continuous(name = "", breaks = c(1:58), labels = cd8.names) +
-  scale_fill_gradientn(colours = c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404"), name = "Shared\nsequences", limits = c(100, 6000)) +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 20, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 20, color = "black", angle = 90, vjust = 0.5, hjust = 1),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_fixed()
-
-ggsave("../../Results/Updated_plots/CD4_alpha_shared_sequences.png", cd4a.heatmap, bg = "transparent", units = "cm", width = 60, height = 40)
-ggsave("../../Results/Updated_plots/CD4_beta_shared_sequences.png", cd4b.heatmap, bg = "transparent", units = "cm", width = 60, height = 40)
-ggsave("../../Results/Updated_plots/CD8_alpha_shared_sequences.png", cd8a.heatmap, bg = "transparent", units = "cm", width = 60, height = 40)
-ggsave("../../Results/Updated_plots/CD8_beta_shared_sequences.png", cd8b.heatmap, bg = "transparent", units = "cm", width = 60, height = 40)
-
-####Plot heatmaps of shared aa sequences####
-library(gplots)
+## Plot shared TCR sequences ---------------------------------------------------
+message("Plot shared TCR sequences")
 
 #set colors
 cols.cd4 <- rep('white', nrow(heat.cd4a))
@@ -1426,10 +1139,10 @@ cols.cd8[grepl("^L", row.names(heat.cd8a))] <- '#1b9e77'
 cols.cd8[grepl("^W", row.names(heat.cd8a))] <- '#7570b3'
 cols.cd8[grepl("^N", row.names(heat.cd8a))] <- 'white'
 
-png("../../Results/Updated_plots/Final_plots/CD4_alpha_heatmap.png",    # create PNG for the heat map        
-    width = 6*300,        # 5 x 300 pixels
+png(here("Results", "Updated_plots", "Final_plots", "CD4_alpha_heatmap.png"),    #create PNG for the heat map        
+    width = 6*300,        #5 x 300 pixels
     height = 6*300,
-    res = 300,            # 300 pixels per inch
+    res = 300,            #300 pixels per inch
     pointsize = 8)
 heatmap.2(heat.cd4a, trace = "none", na.color = "white", scale = "none", 
           col = colorRampPalette(c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404")) (n = 20),
@@ -1446,10 +1159,10 @@ heatmap.2(heat.cd4a, trace = "none", na.color = "white", scale = "none",
           })
 dev.off()
 
-png("../../Results/Updated_plots/Final_plots/CD4_beta_heatmap.png",    # create PNG for the heat map        
-    width = 6*300,        # 5 x 300 pixels
+png(here("Results", "Updated_plots", "Final_plots", "CD4_beta_heatmap.png"),    #create PNG for the heat map        
+    width = 6*300,        #5 x 300 pixels
     height = 6*300,
-    res = 300,            # 300 pixels per inch
+    res = 300,            #300 pixels per inch
     pointsize = 8)
 heatmap.2(heat.cd4b, trace = "none", na.color = "white", scale = "none", 
           col = colorRampPalette(c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404")) (n = 20),
@@ -1466,10 +1179,10 @@ heatmap.2(heat.cd4b, trace = "none", na.color = "white", scale = "none",
           })
 dev.off()
 
-png("../../Results/Updated_plots/Final_plots/CD8_alpha_heatmap.png",    # create PNG for the heat map        
-    width = 6*300,        # 5 x 300 pixels
+png(here("Results", "Updated_plots", "Final_plots", "CD8_alpha_heatmap.png"),    #create PNG for the heat map        
+    width = 6*300,        #5 x 300 pixels
     height = 6*300,
-    res = 300,            # 300 pixels per inch
+    res = 300,            #300 pixels per inch
     pointsize = 8)
 heatmap.2(heat.cd8a, trace = "none", na.color = "white", scale = "none", 
           col = colorRampPalette(c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404")) (n = 20),
@@ -1486,10 +1199,10 @@ heatmap.2(heat.cd8a, trace = "none", na.color = "white", scale = "none",
           })
 dev.off()
 
-png("../../Results/Updated_plots/Final_plots/CD8_beta_heatmap.png",    # create PNG for the heat map        
-    width = 6*300,        # 5 x 300 pixels
+png(here("Results", "Updated_plots", "Final_plots", "CD8_beta_heatmap.png"),    #create PNG for the heat map        
+    width = 6*300,        #5 x 300 pixels
     height = 6*300,
-    res = 300,            # 300 pixels per inch
+    res = 300,            #300 pixels per inch
     pointsize = 8)
 heatmap.2(heat.cd8b, trace = "none", na.color = "white", scale = "none", 
           col = colorRampPalette(c("#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404")) (n = 20),
@@ -1506,16 +1219,11 @@ heatmap.2(heat.cd8b, trace = "none", na.color = "white", scale = "none",
           })
 dev.off()
 
-####PCOA analysis for shared AA sequence data####
-#read in data
-share.cd4a <- read.csv("../CD4_alpha_Repertoire_PCOA_fixed.csv", header = TRUE)
-share.cd4b <- read.csv("../CD4_beta_Repertoire_PCOA_fixed.csv", header = TRUE)
-share.cd8a <- read.csv("../CD8_alpha_Repertoire_PCOA_fixed.csv", header = TRUE)
-share.cd8b <- read.csv("../CD8_beta_Repertoire_PCOA_fixed.csv", header = TRUE)
+
+## PCoA for shared TCR sequences -----------------------------------------------
+message("PCoA for shared TCR sequences")
 
 #calculate means and modes for sharing data
-library(modeest)
-
 rep.cd4a.long2 <- rep.cd4a.long[which(!is.na(rep.cd4a.long$Freq)),]
 rep.cd4b.long2 <- rep.cd4b.long[which(!is.na(rep.cd4b.long$Freq)),]
 rep.cd8a.long2 <- rep.cd8a.long[which(!is.na(rep.cd8a.long$Freq)),]
@@ -1561,8 +1269,6 @@ for(i in 1:58){
     
   }
 }
-
-library(vegan)
 
 #make row names
 rownames(share.cd4a) <- share.cd4a[, 1]
@@ -1620,7 +1326,10 @@ cd8a_pcoa2$age <- mouse.data.lab.cd8$Age_days
 cd8b_pcoa2$sex <- mouse.data.lab.cd8$Sex
 cd8b_pcoa2$age <- mouse.data.lab.cd8$Age_days
 
-####Plot PCOA results####
+
+## Plot PCoA for shared TCR sequences ------------------------------------------
+message("Plot PCoA for shared TCR sequences")
+
 cd4a.pcoa.plot <- ggplot(data = cd4a_pcoa2, aes(x = Dim1, y = Dim2, color = site)) +
   geom_point(size = 6) +
   scale_x_continuous(name = "PCo1") +
@@ -1629,10 +1338,7 @@ cd4a.pcoa.plot <- ggplot(data = cd4a_pcoa2, aes(x = Dim1, y = Dim2, color = site
   ggtitle("") +
   guides(color = guide_legend(override.aes = list(size = 8))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -1650,10 +1356,7 @@ cd4b.pcoa.plot <- ggplot(data = cd4b_pcoa2, aes(x = Dim1, y = Dim2, color = site
   ggtitle("") +
   guides(color = guide_legend(override.aes = list(size = 8))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -1671,10 +1374,7 @@ cd8a.pcoa.plot <- ggplot(data = cd8a_pcoa2, aes(x = Dim1, y = Dim2, color = site
   ggtitle("") +
   guides(color = guide_legend(override.aes = list(size = 8))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -1692,10 +1392,7 @@ cd8b.pcoa.plot <- ggplot(data = cd8b_pcoa2, aes(x = Dim1, y = Dim2, color = site
   ggtitle("") +
   guides(color = guide_legend(override.aes = list(size = 8))) +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -1706,139 +1403,132 @@ cd8b.pcoa.plot <- ggplot(data = cd8b_pcoa2, aes(x = Dim1, y = Dim2, color = site
     panel.grid.minor = element_blank())
 
 #save plots
-ggsave("../../Results/Updated_plots/Final_plots/CD4_alpha_PCOA.png", cd4a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Final_plots/CD4_beta_PCOA.png", cd4b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_alpha_PCOA.png", cd8a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_beta_PCOA.png", cd8b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_alpha_PCOA.png"), cd4a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_beta_PCOA.png"), cd4b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_alpha_PCOA.png"), cd8a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_beta_PCOA.png"), cd8b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
-####Plot PCOA results with sex and age####
-require(scales)
-amin <- 0.2
 
-highcol <- "black"       # or a color name like "blue"
+## Exploratory plots PCoA for shared TCR sequences -----------------------------
+message("Exploratory plots PCoA for shared TCR sequences")
 
-lowcol.hex <- as.hexmode(round(col2rgb(highcol) * amin + 255 * (1 - amin)))
-lowcol <- paste0("#",   sep = "",
-                 paste(format(lowcol.hex, width = 2), collapse = ""))
+# amin <- 0.2
+# 
+# highcol <- "black"
+# 
+# lowcol.hex <- as.hexmode(round(col2rgb(highcol) * amin + 255 * (1 - amin)))
+# lowcol <- paste0("#",   sep = "",
+#                  paste(format(lowcol.hex, width = 2), collapse = ""))
+# 
+# cd4a.pcoa.plot2 <- ggplot(data = cd4a_pcoa2[which(!is.na(cd4a_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
+#   geom_point(aes(color = site), size = 4) +
+#   geom_point(aes(fill = age), alpha = 0) +
+#   scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
+#   scale_x_continuous(name = "PCo1") +
+#   scale_y_continuous(name = "PCo2") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
+#   scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
+#   guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
+#          shape = guide_legend(order = 1, override.aes = list(size = 8)),
+#          alpha = "none") +
+#   ggtitle("CD4 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
+# 
+# cd4b.pcoa.plot <- ggplot(data = cd4b_pcoa2[which(!is.na(cd4b_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
+#   geom_point(aes(color = site), size = 4) +
+#   geom_point(aes(fill = age), alpha = 0) +
+#   scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
+#   scale_x_continuous(name = "PCo1") +
+#   scale_y_continuous(name = "PCo2") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
+#   scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
+#   guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
+#          shape = guide_legend(order = 1, override.aes = list(size = 8)),
+#          alpha = "none") +
+#   ggtitle("CD4 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
+# 
+# cd8a.pcoa.plot <- ggplot(data = cd8a_pcoa2[which(!is.na(cd8a_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
+#   geom_point(aes(color = site), size = 4) +
+#   geom_point(aes(fill = age), alpha = 0) +
+#   scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
+#   scale_x_continuous(name = "PCo1") +
+#   scale_y_continuous(name = "PCo2") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
+#   scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), , limits = c(17, 345)) +
+#   guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
+#          shape = guide_legend(order = 1, override.aes = list(size = 8)),
+#          alpha = "none") +
+#   ggtitle("CD8 alpha") +
+#   guides(color = guide_legend(override.aes = list(size = 8))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
+# 
+# cd8b.pcoa.plot <- ggplot(data = cd8b_pcoa2[which(!is.na(cd8b_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
+#   geom_point(aes(color = site), size = 4) +
+#   geom_point(aes(fill = age), alpha = 0) +
+#   scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
+#   scale_x_continuous(name = "PCo1") +
+#   scale_y_continuous(name = "PCo2") +
+#   scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
+#   scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
+#   scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
+#   guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
+#          shape = guide_legend(order = 1, override.aes = list(size = 8)),
+#          alpha = "none") +
+#   ggtitle("CD8 beta") +
+#   guides(color = guide_legend(override.aes = list(size = 8))) +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 42, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm'))
+# 
+# #save plots
+# ggsave(here("Results", "Updated_plots", "CD4_alpha_PCOA2.png"), cd4a.pcoa.plot2, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "CD4_beta_PCOA2.png"), cd4b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "CD8_alpha_PCOA2.png"), cd8a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
+# ggsave(here("Results", "Updated_plots", "CD8_beta_PCOA2.png"), cd8b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
 
-cd4a.pcoa.plot2 <- ggplot(data = cd4a_pcoa2[which(!is.na(cd4a_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
-  geom_point(aes(color = site), size = 4) +
-  geom_point(aes(fill = age), alpha = 0) +
-  scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
-  scale_x_continuous(name = "PCo1") +
-  scale_y_continuous(name = "PCo2") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
-  scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
-  guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
-         shape = guide_legend(order = 1, override.aes = list(size = 8)),
-         alpha = "none") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
 
-cd4b.pcoa.plot <- ggplot(data = cd4b_pcoa2[which(!is.na(cd4b_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
-  geom_point(aes(color = site), size = 4) +
-  geom_point(aes(fill = age), alpha = 0) +
-  scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
-  scale_x_continuous(name = "PCo1") +
-  scale_y_continuous(name = "PCo2") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
-  scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
-  guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
-         shape = guide_legend(order = 1, override.aes = list(size = 8)),
-         alpha = "none") +
-  ggtitle("CD4 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
+## Data preparation for TCR sequence sharing analyses --------------------------
+message("Data preparation for TCR sequence sharing analyses")
 
-cd8a.pcoa.plot <- ggplot(data = cd8a_pcoa2[which(!is.na(cd8a_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
-  geom_point(aes(color = site), size = 4) +
-  geom_point(aes(fill = age), alpha = 0) +
-  scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
-  scale_x_continuous(name = "PCo1") +
-  scale_y_continuous(name = "PCo2") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
-  scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), , limits = c(17, 345)) +
-  guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
-         shape = guide_legend(order = 1, override.aes = list(size = 8)),
-         alpha = "none") +
-  ggtitle("CD8 alpha") +
-  guides(color = guide_legend(override.aes = list(size = 8))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-cd8b.pcoa.plot <- ggplot(data = cd8b_pcoa2[which(!is.na(cd8b_pcoa2$age)),], aes(x = Dim1, y = Dim2, color = site, shape = sex, alpha = age)) +
-  geom_point(aes(color = site), size = 4) +
-  geom_point(aes(fill = age), alpha = 0) +
-  scale_fill_gradient(name = "Age (days)", high = highcol, low = lowcol, limits = c(17, 345)) +
-  scale_x_continuous(name = "PCo1") +
-  scale_y_continuous(name = "PCo2") +
-  scale_color_manual(labels = c("Lab", "Nott.", "Wirral"), name = "", values = c('#1b9e77', '#d95f02', '#7570b3')) +
-  scale_shape_manual(labels = c("F", "M"), name = "Sex", values = c("circle", "square")) +
-  scale_alpha_continuous(name = "Age (days)", range = c(0.2, 0.9), limits = c(17, 345)) +
-  guides(color = guide_legend(order = 2, override.aes = list(size = 8)),
-         shape = guide_legend(order = 1, override.aes = list(size = 8)),
-         alpha = "none") +
-  ggtitle("CD8 beta") +
-  guides(color = guide_legend(override.aes = list(size = 8))) +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 42, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm'))
-
-#save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_PCOA2.png", cd4a.pcoa.plot2, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/CD4_beta_PCOA2.png", cd4b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/CD8_alpha_PCOA2.png", cd8a.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-ggsave("../../Results/Updated_plots/CD8_beta_PCOA2.png", cd8b.pcoa.plot, bg = "transparent", units = "cm", width = 30, height = 20)
-
-####Sharingness vs age/sex data preparation####
 #get age and sex data
 rep.cd4a.long <- rep.cd4a.long[which(!is.na(rep.cd4a.long$Freq)),]
 rep.cd4a.long$mouse_1 <- mouse.data.lab.cd4$ID[rep.cd4a.long$Var1]
@@ -1907,8 +1597,10 @@ rep.long$type <- as.factor(rep.long$type)
 
 rep.long.nott <- rep.long[which(grepl("^N", rep.long$mouse_1) & grepl("^N", rep.long$mouse2)), ]
 
-####Statistical tests####
-##overall
+
+## Statistical tests for TCR sequence sharing analyses -------------------------
+message("Statistical tests for TCR sequence sharing analyses")
+
 share.mod <- glm(Freq ~ age_dif + sex_dif + age_sum + type + type*age_dif + type*age_sum, data = rep.long, family = "gaussian")
 summary(share.mod)
 
@@ -1928,268 +1620,165 @@ emtrends(share.mod, pairwise ~ type, var = "age_dif", adjust = "tukey")
 #get trends for age sum
 emtrends(share.mod, pairwise ~ type, var = "age_sum", adjust = "tukey")
 
-####Sharingness vs age dif plot####
-CD4.alpha.share.age.plot <- ggplot(data = rep.cd4a.long, aes(x = age_dif, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Difference in pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+## Plots for TCR sequence sharing with age differences -------------------------
+message("Plots for TCR sequence sharing with age differences")
 
-CD4.beta.share.age.plot <- ggplot(data = rep.cd4b.long, aes(x = age_dif, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Difference in pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+# CD4.alpha.share.age.plot <- ggplot(data = rep.cd4a.long, aes(x = age_dif, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Difference in pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD4 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+# 
+# CD4.beta.share.age.plot <- ggplot(data = rep.cd4b.long, aes(x = age_dif, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Difference in pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD4 beta") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+# 
+# CD8.alpha.share.age.plot <- ggplot(data = rep.cd8a.long, aes(x = age_dif, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Difference in pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD8 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+# 
+# CD8.beta.share.age.plot <- ggplot(data = rep.cd8b.long, aes(x = age_dif, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Difference in pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD8 beta") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+# 
+# ##save plots
+# ggsave(here("Results", "Updated_plots", "CD4_alpha_sharing_age.png"), CD4.alpha.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD4_beta_sharing_age.png"), CD4.beta.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_alpha_sharing_age.png"), CD8.alpha.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_beta_sharing_age.png"), CD8.beta.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
 
-CD8.alpha.share.age.plot <- ggplot(data = rep.cd8a.long, aes(x = age_dif, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Difference in pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
 
-CD8.beta.share.age.plot <- ggplot(data = rep.cd8b.long, aes(x = age_dif, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Difference in pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
+## Plots for TCR sequence sharing with age sums --------------------------------
+message("Plots for TCR sequence sharing with age sums")
+# 
+# CD4.alpha.share.age.plot2 <- ggplot(data = rep.cd4a.long, aes(x = age_sum, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Sum of pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD4 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
+# 
+# CD4.beta.share.age.plot2 <- ggplot(data = rep.cd4b.long, aes(x = age_sum, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Sum of pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD4 beta") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
+# 
+# CD8.alpha.share.age.plot2 <- ggplot(data = rep.cd8a.long, aes(x = age_sum, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Sum of pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD8 alpha") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
+# 
+# CD8.beta.share.age.plot2 <- ggplot(data = rep.cd8b.long, aes(x = age_sum, y = Freq)) +
+#   geom_point(size = 4) +
+#   scale_x_continuous(name = "Sum of pairwise age (days)") +
+#   scale_y_continuous(name = "No. shared sequences") +
+#   ggtitle("CD8 beta") +
+#   theme_bw() +
+#   theme(plot.title = element_text(size = 28, family = "Calibri"),
+#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+#     axis.title = element_text(size = 42, family = "Calibri"),
+#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+#     axis.text.x = element_text(size = 38, color = "black"),
+#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+#     legend.key.height= unit(1, 'cm'),
+#     legend.key.width= unit(1, 'cm')) +
+#   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
+# 
+# ##save plots
+# ggsave(here("Results", "Updated_plots", "CD4_alpha_sharing_age2.png"), CD4.alpha.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD4_beta_sharing_age2.png"), CD4.beta.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_alpha_sharing_age2.png"), CD8.alpha.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
+# ggsave(here("Results", "Updated_plots", "CD8_beta_sharing_age2.png"), CD8.beta.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
 
-##save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_sharing_age.png", CD4.alpha.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_sharing_age.png", CD4.beta.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_sharing_age.png", CD8.alpha.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_sharing_age.png", CD8.beta.share.age.plot, bg = "transparent", units = "cm", width = 30, height = 23)
 
-####Sharingness vs age sum plot####
-CD4.alpha.share.age.plot2 <- ggplot(data = rep.cd4a.long, aes(x = age_sum, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Sum of pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
+## Statistical tests for TCR sequence sharing analyses (Nottingham only) -------
+message("Statistical tests for TCR sequence sharing analyses (Nottingham only)")
 
-CD4.beta.share.age.plot2 <- ggplot(data = rep.cd4b.long, aes(x = age_sum, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Sum of pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
-
-CD8.alpha.share.age.plot2 <- ggplot(data = rep.cd8a.long, aes(x = age_sum, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Sum of pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
-
-CD8.beta.share.age.plot2 <- ggplot(data = rep.cd8b.long, aes(x = age_sum, y = Freq)) +
-  geom_point(size = 4) +
-  scale_x_continuous(name = "Sum of pairwise age (days)") +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
-
-##save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_sharing_age2.png", CD4.alpha.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_sharing_age2.png", CD4.beta.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_sharing_age2.png", CD8.alpha.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_sharing_age2.png", CD8.beta.share.age.plot2, bg = "transparent", units = "cm", width = 30, height = 23)
-
-####Sharingness vs sex plot####
-CD4.alpha.share.sex.plot <- ggplot(data = rep.cd4a.long, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD4.beta.share.sex.plot <- ggplot(data = rep.cd4b.long, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD8.alpha.share.sex.plot <- ggplot(data = rep.cd8a.long, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD8.beta.share.sex.plot <- ggplot(data = rep.cd8b.long, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-##save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_sharing_sex.png", CD4.alpha.share.sex.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_sharing_sex.png", CD4.beta.share.sex.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_sharing_sex.png", CD8.alpha.share.sex.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_sharing_sex.png", CD8.beta.share.sex.plot, bg = "transparent", units = "cm", width = 30, height = 23)
-
-####Statistical tests for Nottingham only####
 ##overall
 share.mod.nott <- glm(Freq ~ age_dif + sex_dif + age_sum + type + type*age_dif + type*age_sum, data = rep.long.nott, family = "gaussian")
 summary(share.mod.nott)
@@ -2210,17 +1799,17 @@ emtrends(share.mod.nott, pairwise ~ type, var = "age_dif", adjust = "tukey")
 #get trends for age sum
 emtrends(share.mod.nott, pairwise ~ type, var = "age_sum", adjust = "tukey")
 
-####Sharingness vs age dif plot for Nottingham only####
+
+## Plots for TCR sequence sharing with age differences (Nottingham only) -------
+message("Plots for TCR sequence sharing with age differences (Nottingham only)")
+
 CD4.alpha.share.age.plot.nott <- ggplot(data = rep.cd4a.long.nott, aes(x = age_dif, y = Freq)) +
   geom_point(size = 4, color = "#d95f02") +
   scale_x_continuous(name = "Difference in pairwise age (days)") +
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2239,10 +1828,7 @@ CD4.beta.share.age.plot.nott <- ggplot(data = rep.cd4b.long.nott, aes(x = age_di
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2261,10 +1847,7 @@ CD8.alpha.share.age.plot.nott <- ggplot(data = rep.cd8a.long.nott, aes(x = age_d
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2283,10 +1866,7 @@ CD8.beta.share.age.plot.nott <- ggplot(data = rep.cd8b.long.nott, aes(x = age_di
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2300,22 +1880,22 @@ CD8.beta.share.age.plot.nott <- ggplot(data = rep.cd8b.long.nott, aes(x = age_di
   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 330))
 
 ##save plots
-ggsave("../../Results/Updated_plots/Final_plots/CD4_alpha_sharing_age_nottingham.png", CD4.alpha.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD4_beta_sharing_age_nottingham.png", CD4.beta.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_alpha_sharing_age_nottingham.png", CD8.alpha.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_beta_sharing_age_nottingham.png", CD8.beta.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_alpha_sharing_age_nottingham.png"), CD4.alpha.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_beta_sharing_age_nottingham.png"), CD4.beta.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_alpha_sharing_age_nottingham.png"), CD8.alpha.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_beta_sharing_age_nottingham.png"), CD8.beta.share.age.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
 
-####Sharingness vs age sum plot for Nottingham only####
+
+## Plots for TCR sequence sharing with age sums (Nottingham only) --------------
+message("Plots for TCR sequence sharing with age sums (Nottingham only)")
+
 CD4.alpha.share.age.plot2.nott <- ggplot(data = rep.cd4a.long.nott, aes(x = age_sum, y = Freq)) +
   geom_point(size = 4, color = "#d95f02") +
   scale_x_continuous(name = "Sum of pairwise age (days)") +
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2334,10 +1914,7 @@ CD4.beta.share.age.plot2.nott <- ggplot(data = rep.cd4b.long.nott, aes(x = age_s
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2356,10 +1933,7 @@ CD8.alpha.share.age.plot2.nott <- ggplot(data = rep.cd8a.long.nott, aes(x = age_
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2378,10 +1952,7 @@ CD8.beta.share.age.plot2.nott <- ggplot(data = rep.cd8b.long.nott, aes(x = age_s
   scale_y_continuous(name = "Number shared") +
   ggtitle("") +
   theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
+  theme(plot.title = element_text(size = 28, family = "Calibri"),
     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
     axis.title = element_text(size = 42, family = "Calibri"),
     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
@@ -2395,10 +1966,10 @@ CD8.beta.share.age.plot2.nott <- ggplot(data = rep.cd8b.long.nott, aes(x = age_s
   coord_cartesian(ylim = c(0, 6000), xlim = c(0, 660))
 
 ##save plots
-ggsave("../../Results/Updated_plots/Final_plots/CD4_alpha_sharing_age2_nottingham.png", CD4.alpha.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD4_beta_sharing_age2_nottingham.png", CD4.beta.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_alpha_sharing_age2_nottingham.png", CD8.alpha.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_beta_sharing_age2_nottingham.png", CD8.beta.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_alpha_sharing_age2_nottingham.png"), CD4.alpha.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_beta_sharing_age2_nottingham.png"), CD4.beta.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_alpha_sharing_age2_nottingham.png"), CD8.alpha.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_beta_sharing_age2_nottingham.png"), CD8.beta.share.age.plot2.nott, bg = "transparent", units = "cm", width = 30, height = 23)
 
 #patchwork for cd8a
 overall.sharing.plot <- CD8.alpha.share.age.plot.nott / CD8.alpha.share.age.plot2.nott +
@@ -2415,94 +1986,7 @@ cd8b.sharing.plot <- CD8.beta.share.age.plot.nott + CD8.beta.share.age.plot2.not
   plot_annotation(theme = theme(plot.tag = element_text(size = 42, face = "bold")))
 
 #save patchwork
-ggsave("../../Results/Updated_plots/Final_plots/Sharing_plot.png", overall.sharing.plot, bg = "transparent", units = "cm", width = 30, height = 46)
-ggsave("../../Results/Updated_plots/Final_plots/CD4_alpha_sharing_plot.png", cd4a.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD4_beta_sharing_plot.png", cd4b.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
-ggsave("../../Results/Updated_plots/Final_plots/CD8_beta_sharing_plot.png", cd8b.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
-
-####Sharingness vs sex plot for Nottingham only####
-CD4.alpha.share.sex.plot.nott <- ggplot(data = rep.cd4a.long.nott, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD4.beta.share.sex.plot.nott <- ggplot(data = rep.cd4b.long.nott, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD4 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD8.alpha.share.sex.plot.nott <- ggplot(data = rep.cd8a.long.nott, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 alpha") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-CD8.beta.share.sex.plot.nott <- ggplot(data = rep.cd8b.long.nott, aes(x = sex_dif, y = Freq)) +
-  geom_boxplot(linewidth = 2, outlier.size = 3) +
-  scale_x_discrete(name = "Pairwise sex comparison", labels = c("Different", "Same")) +
-  scale_y_continuous(name = "No. shared sequences") +
-  ggtitle("CD8 beta") +
-  theme_bw() +
-  theme(#panel.background = element_rect(fill='transparent'),
-    #plot.background = element_rect(fill='transparent', color=NA),
-    #legend.background = element_rect(fill='transparent'),
-    plot.title = element_text(size = 28, family = "Calibri"),
-    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-    axis.title = element_text(size = 42, family = "Calibri"),
-    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-    axis.text.x = element_text(size = 38, color = "black"),
-    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-    legend.key.height= unit(1, 'cm'),
-    legend.key.width= unit(1, 'cm')) +
-  coord_cartesian(ylim = c(0, 6000))
-
-##save plots
-ggsave("../../Results/Updated_plots/CD4_alpha_sharing_sex_nottingham.png", CD4.alpha.share.sex.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD4_beta_sharing_sex_nottingham.png", CD4.beta.share.sex.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_alpha_sharing_sex_nottingham.png", CD8.alpha.share.sex.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
-ggsave("../../Results/Updated_plots/CD8_beta_sharing_sex_nottingham.png", CD8.beta.share.sex.plot.nott, bg = "transparent", units = "cm", width = 30, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "Sharing_plot.png"), overall.sharing.plot, bg = "transparent", units = "cm", width = 30, height = 46)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_alpha_sharing_plot.png"), cd4a.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD4_beta_sharing_plot.png"), cd4b.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
+ggsave(here("Results", "Updated_plots", "Final_plots", "CD8_beta_sharing_plot.png"), cd8b.sharing.plot, bg = "transparent", units = "cm", width = 60, height = 23)
