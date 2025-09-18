@@ -1,0 +1,29 @@
+# RStudio project files
+*.Rproj
+.Rproj.user
+
+# R history and workspace files
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS system files
+.DS_Store
+
+# Stan compiled binaries (usually with no extension or .o, .so)
+*.o
+*.so
+*.dll
+
+# Stan temporary or build files (if any specific patterns apply)
+*.exe
+*.dll
+
+# Folders
+Data/
+Results/
+Writing/
+Administrative/
+
+# Office temporary files
+~$*
