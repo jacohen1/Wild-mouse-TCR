@@ -20,7 +20,7 @@ rm(list=ls())
 ## Load packages ---------------------------------------------------------------
 message("Load packages")
 
-packages <- c('here', 'ggplot2', 'stringr', 'ggbeeswarm', 'emmeans', 'showtext',
+packages <- c('here', 'ggplot2', 'stringr', 'ggbeeswarm', 'emmeans', 'showtext', 'patchwork',
               'DHARMa', 'dplyr', 'tidyr', 'vegan', 'ggpubr', 'gplots', 'modeest', 'scales')
 lapply(packages, library, character.only = TRUE)
 
@@ -1087,39 +1087,84 @@ message("Exploratory plots for Shannon's diversity")
 ## Exploratory plots TCR frequencies -------------------------------------------
 message("Exploratory plots TCR frequencies")
 
-# ##CD4 alpha
-# tcr.cd4a.hist <- ggplot(tcr.cd4a, aes(x = count)) +
-#   geom_histogram(binwidth = 1, color = "black", fill = "white") +
-#   scale_x_continuous(name = "No. total repeats") +
-#   scale_y_continuous(name = "Frequency") +
-#   ggtitle("CD4 alpha") +
-#   theme_bw() +
-#   theme(plot.title = element_text(size = 42, family = "Calibri"),
-#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-#     axis.title = element_text(size = 42, family = "Calibri"),
-#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-#     axis.text.x = element_text(size = 38, color = "black"),
-#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-#     legend.key.height= unit(1, 'cm'),
-#     legend.key.width= unit(1, 'cm'))
-# 
-# #on a log scale
-# tcr.cd4a.hist2 <- ggplot(tcr.cd4a, aes(x = count)) +
-#   geom_histogram(binwidth = 1, color = "black", fill = "white") +
-#   scale_x_continuous(name = "No. total repeats") +
-#   scale_y_log10(name = "Log10, Frequency") +
-#   ggtitle("CD4 alpha") +
-#   theme_bw() +
-#   theme(plot.title = element_text(size = 42, family = "Calibri"),
-#     axis.text = element_text(size = 38, color = "black", family = "Calibri"),
-#     axis.title = element_text(size = 42, family = "Calibri"),
-#     axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
-#     axis.text.x = element_text(size = 38, color = "black"),
-#     legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
-#     legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
-#     legend.key.height= unit(1, 'cm'),
-#     legend.key.width= unit(1, 'cm'))
+##CD4 alpha
+tcr.cd4a.hist <- ggplot(tcr.cd4a, aes(x = count)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "white") +
+  scale_x_continuous(name = "Mice sharing a TCR sequence") +
+  scale_y_log10(name = "Number of TCR sequences") +
+  ggtitle("") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
+    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+    axis.title = element_text(size = 42, family = "Calibri"),
+    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+    axis.text.x = element_text(size = 38, color = "black"),
+    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.key.height= unit(1, 'cm'),
+    legend.key.width= unit(1, 'cm'))
+
+
+##CD4 beta
+tcr.cd4b.hist <- ggplot(tcr.cd4b, aes(x = count)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "white") +
+  scale_x_continuous(name = "Mice sharing a TCR sequence") +
+  scale_y_log10(name = "Number of TCR sequences") +
+  ggtitle("") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
+    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+    axis.title = element_text(size = 42, family = "Calibri"),
+    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+    axis.text.x = element_text(size = 38, color = "black"),
+    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.key.height= unit(1, 'cm'),
+    legend.key.width= unit(1, 'cm'))
+
+##CD8 alpha
+tcr.cd8a.hist <- ggplot(tcr.cd8a, aes(x = count)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "white") +
+  scale_x_continuous(name = "Mice sharing a TCR sequence") +
+  scale_y_log10(name = "Number of TCR sequences") +
+  ggtitle("") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
+    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+    axis.title = element_text(size = 42, family = "Calibri"),
+    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+    axis.text.x = element_text(size = 38, color = "black"),
+    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.key.height= unit(1, 'cm'),
+    legend.key.width= unit(1, 'cm'))
+
+##CD8 beta
+tcr.cd8b.hist <- ggplot(tcr.cd8b, aes(x = count)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "white") +
+  scale_x_continuous(name = "Mice sharing a TCR sequence") +
+  scale_y_log10(name = "Number of TCR sequences") +
+  ggtitle("") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 42, family = "Calibri"),
+    axis.text = element_text(size = 38, color = "black", family = "Calibri"),
+    axis.title = element_text(size = 42, family = "Calibri"),
+    axis.title.y = element_text(size = 42, family = "Calibri", vjust = 1.5),
+    axis.text.x = element_text(size = 38, color = "black"),
+    legend.text = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.title = element_text(size = 38, family = "Calibri", face = "bold"),
+    legend.key.height= unit(1, 'cm'),
+    legend.key.width= unit(1, 'cm'))
+
+#patchwork plots
+overall.tcr.freq.plot <- (tcr.cd4a.hist + tcr.cd4b.hist) / (tcr.cd8a.hist + tcr.cd8b.hist) +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 42, face = "bold"), legend.position = "bottom", legend.justification = "left",
+        plot.margin = unit(c(5, 10, 5, 5), "mm"))
+
+#save patchwork
+ggsave(here("Results", "Updated_plots", "TCR_frequencies.png"), overall.tcr.freq.plot, bg = "transparent", units = "cm", width = 55, height = 40)
 
 
 ## Plot shared TCR sequences ---------------------------------------------------
@@ -1230,15 +1275,19 @@ rep.cd8a.long2 <- rep.cd8a.long[which(!is.na(rep.cd8a.long$Freq)),]
 rep.cd8b.long2 <- rep.cd8b.long[which(!is.na(rep.cd8b.long$Freq)),]
 
 mean(rep.cd4a.long$Freq, na.rm = TRUE)
+median(rep.cd4a.long$Freq, na.rm = TRUE)
 mlv(rep.cd4a.long2$Freq, method = "mfv")
 
 mean(rep.cd4b.long$Freq, na.rm = TRUE)
+median(rep.cd4b.long$Freq, na.rm = TRUE)
 mlv(rep.cd4b.long2$Freq, method = "mfv")
 
 mean(rep.cd8a.long$Freq, na.rm = TRUE)
+median(rep.cd8a.long$Freq, na.rm = TRUE)
 mlv(rep.cd8a.long2$Freq, method = "mfv")
 
 mean(rep.cd8b.long$Freq, na.rm = TRUE)
+median(rep.cd8b.long$Freq, na.rm = TRUE)
 mlv(rep.cd8b.long2$Freq, method = "mfv")
 
 ##rescale to be a dissimilarity matrix between 0 and 1
