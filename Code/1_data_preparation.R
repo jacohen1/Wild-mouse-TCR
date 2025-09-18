@@ -32,7 +32,7 @@ showtext_opts(dpi = 300)
 message("Load data")
 
 ##read in mouse metadata file
-mouse.data <- read.csv(here("Data", "Mouse_metadata_tcr_mice_Jacob.csv"), header = TRUE)
+mouse.data <- read.csv(here("Data", "additional_data", "Mouse_metadata_tcr_mice_Jacob.csv"), header = TRUE)
 
 ##read in all .tsv files
 cd4a.files = list.files(path = here("Data", "tcrs_wild_mice", "CD4_alpha"), pattern = "_CD4_1_alpha\\.tsv", full.names = TRUE)
@@ -90,6 +90,47 @@ cd4b <- mapply(cbind, cd4b, "ID" = names(cd4b), SIMPLIFY = F)
 cd8a <- mapply(cbind, cd8a, "ID" = names(cd8a), SIMPLIFY = F)
 cd8b <- mapply(cbind, cd8b, "ID" = names(cd8b), SIMPLIFY = F)
 
+
+## Get number of rows where the Productive column is False ---------------------
+message("Get number of rows where the Productive column is False")
+
+# #count number of productive = FALSE rows in each file
+# n.rem <- function(df){
+#   n_before <- nrow(df)
+#   df_filtered <- df[df$productive == TRUE, ]
+#   n_removed <- n_before - nrow(df_filtered)
+#   return(n_removed)
+# }
+# 
+# #apply to the data sets
+# cd4a_removed <- sapply(cd4a, n.rem)
+# cd4b_removed <- sapply(cd4b, n.rem)
+# cd8a_removed <- sapply(cd8a, n.rem)
+# cd8b_removed <- sapply(cd8b, n.rem)
+# 
+# #remove the mice that are eventually excluded
+# to_remove_cd4 <- c("N63", "N42", "N24", "N01", "N27", "N11", "N12", "N09", "N35")
+# to_remove_cd8 <- c("N17", "N42", "N22", "N01", "N21", "N11", "N09", "N27", "N12", "N51", "N10", "N35", "N36")
+# 
+# #find the positions of these names
+# positions_cd4 <- which(cd4a.names %in% to_remove_cd4)
+# positions_cd8 <- which(cd8a.names %in% to_remove_cd8)
+# 
+# #remove the necessary mice
+# cd4a_removed_filtered <- cd4a_removed[-positions_cd4]
+# cd4b_removed_filtered <- cd4b_removed[-positions_cd4]
+# cd8a_removed_filtered <- cd8a_removed[-positions_cd8]
+# cd8b_removed_filtered <- cd8b_removed[-positions_cd8]
+# 
+# #get means and medians for each
+# mean(cd4a_removed_filtered)
+# median(cd4a_removed_filtered)
+# mean(cd4b_removed_filtered)
+# median(cd4b_removed_filtered)
+# mean(cd8a_removed_filtered)
+# median(cd8a_removed_filtered)
+# mean(cd8b_removed_filtered)
+# median(cd8b_removed_filtered)
 
 ## Clean data ------------------------------------------------------------------
 message("Clean data")
