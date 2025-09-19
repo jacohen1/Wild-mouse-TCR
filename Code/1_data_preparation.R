@@ -20,7 +20,8 @@ rm(list=ls())
 ## Load packages ---------------------------------------------------------------
 message("Load packages")
 
-packages <- c('here', 'ggplot2', 'immunarch', 'stringr', 'igraph', 'showtext', 'purrr', 'dplyr', 'tidyr', 'vegan')
+packages <- c('here', 'ggplot2', 'immunarch', 'stringr', 'igraph', 'showtext',
+              'purrr', 'dplyr', 'tidyr', 'vegan', 'poweRlaw')
 lapply(packages, library, character.only = TRUE)
 
 #additional code for showtext package
@@ -136,17 +137,16 @@ message("Get number of rows where the Productive column is False")
 message("Clean data")
 
 #remove all rows with FALSE in productive column
-f.rem <- function(i, x){
-  rem <- x[[i]] <- x[[i]][which(x[[i]]$productive == TRUE),]
-  return(rem)
+f.rem <- function(df){
+  df_filtered <- df[df$productive == TRUE, ]
+  return(df_filtered)
 }
 
-i <- 1:length(cd4a.files)
-
-cd4a <- lapply(i, x = cd4a, f.rem)
-cd4b <- lapply(i, x = cd4b, f.rem)
-cd8a <- lapply(i, x = cd8a, f.rem)
-cd8b <- lapply(i, x = cd8b, f.rem)
+#apply to the data
+cd4a <- lapply(cd4a, f.rem)
+cd4b <- lapply(cd4b, f.rem)
+cd8a <- lapply(cd8a, f.rem)
+cd8b <- lapply(cd8b, f.rem)
 
 ## Extract repertoire sizes ----------------------------------------------------
 message("Extract repertoire sizes")
@@ -192,6 +192,8 @@ mouse.data$CD8.beta.count <- cd8.tcr.count$CD8.beta.count
 
 ## Get number of unique amino acid sequences per mouse -------------------------
 message("Get number of unique amino acid sequences per mouse")
+
+i <- 1:length(cd4a.files)
 
 #write a function
 unique.calc <- function(i, x){
@@ -447,6 +449,71 @@ write.csv(tcr.freq.cd4a, here("Data", "CD4_alpha_TCR_freq.csv"), row.names = FAL
 write.csv(tcr.freq.cd4b, here("Data", "CD4_beta_TCR_freq.csv"), row.names = FALSE)
 write.csv(tcr.freq.cd8a, here("Data", "CD8_alpha_TCR_freq.csv"), row.names = FALSE)
 write.csv(tcr.freq.cd8b, here("Data", "CD8_beta_TCR_freq.csv"), row.names = FALSE)
+
+
+## Run Kolmogorov-Smirnov test to test for power law distribution --------------
+message("Run Kolmogorov-Smirnov test to test for power law distribution")
+# 
+# #remove the mice that are eventually excluded
+# to_remove_cd4 <- c("N63", "N42", "N24", "N01", "N27", "N11", "N12", "N09", "N35")
+# to_remove_cd8 <- c("N17", "N42", "N22", "N01", "N21", "N11", "N09", "N27", "N12", "N51", "N10", "N35", "N36")
+# 
+# #filter the lists
+# cd4a_filtered <- cd4a[setdiff(names(cd4a), to_remove_cd4)]
+# cd4b_filtered <- cd4b[setdiff(names(cd4b), to_remove_cd4)]
+# cd8a_filtered <- cd8a[setdiff(names(cd8a), to_remove_cd8)]
+# cd8b_filtered <- cd8b[setdiff(names(cd8b), to_remove_cd8)]
+# 
+# #function for one-sample KS test against power law
+# ks_powerlaw <- function(df){
+#   data <- df$duplicate_count
+#   
+#   #fit discrete power law
+#   pl <- displ$new(data)
+#   est <- estimate_xmin(pl)
+#   pl$setXmin(est)
+#   pl$setPars(estimate_pars(pl))
+#   
+#   #bootstrap KS test for p-value
+#   ks <- bootstrap_p(pl, no_of_sims = 500, threads = 8)
+#   
+#   #classify result based on p-value
+#   fit_result <- case_when(ks$p > 0.1 ~ "Fits power law",
+#                           ks$p < 0.05 ~ "Does not fit power law",
+#                           TRUE ~ "Borderline")
+#   #return results
+#   tibble(fit_result = fit_result)
+# }
+# 
+# #apply to the lists
+# cd4a_ks_test <- lapply(cd4a_filtered, ks_powerlaw)
+# cd4b_ks_test <- lapply(cd4b_filtered, ks_powerlaw)
+# cd8a_ks_test <- lapply(cd8a_filtered, ks_powerlaw)
+# cd8b_ks_test <- lapply(cd8b_filtered, ks_powerlaw)
+# 
+# #add the list names as dataset identifiers
+# cd4a_ks_test_df <- bind_rows(cd4a_ks_test, .id = "dataset_name")
+# cd4b_ks_test_df <- bind_rows(cd4b_ks_test, .id = "dataset_name")
+# cd8a_ks_test_df <- bind_rows(cd8a_ks_test, .id = "dataset_name")
+# cd8b_ks_test_df <- bind_rows(cd8b_ks_test, .id = "dataset_name")
+# 
+# #get summaries
+# cd4a_ks_outcomes <- cd4a_ks_test_df %>%
+#   count(fit_result) %>%
+#   mutate(percent = 100 * n / sum(n))
+# 
+# cd4b_ks_outcomes <- cd4b_ks_test_df %>%
+#   count(fit_result) %>%
+#   mutate(percent = 100 * n / sum(n))
+# 
+# cd8a_ks_outcomes <- cd8a_ks_test_df %>%
+#   count(fit_result) %>%
+#   mutate(percent = 100 * n / sum(n))
+# 
+# cd8b_ks_outcomes <- cd8b_ks_test_df %>%
+#   count(fit_result) %>%
+#   mutate(percent = 100 * n / sum(n))
+
 
 ## Plot repertoire sizes -------------------------------------------------------
 message("Plot repertoire sizes")
