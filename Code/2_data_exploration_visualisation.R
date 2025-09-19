@@ -1084,8 +1084,27 @@ message("Exploratory plots for Shannon's diversity")
 # ggsave(here("Results", "Updated_plots", "Shannons_diversity_age_cd8b_lab.png"), shannons.age.cd8b.plot.lab, bg = "transparent", units = "cm", width = 30, height = 20)
 
 
-## Exploratory plots TCR frequencies -------------------------------------------
-message("Exploratory plots TCR frequencies")
+## Analysis for TCR sequences shared across mice -------------------------------
+message("Analysis for TCR sequences shared across mice")
+
+
+#function to find how many sequences are shared by X% of mice
+sequences_shared <- function(df, n_mice, threshold){
+  cutoff <- n_mice * threshold
+  total <- sum(df$count >= cutoff)
+  percentage <- (total / nrow(df)) * 100
+  return(list(total = total, percentage = percentage))
+}
+
+#apply function to the data frames
+sequences_shared(tcr.cd4a, n_mice = length(cd4.names), threshold = 0.75)
+sequences_shared(tcr.cd4b, n_mice = length(cd4.names), threshold = 0.75)
+sequences_shared(tcr.cd8a, n_mice = length(cd8.names), threshold = 0.75)
+sequences_shared(tcr.cd8b, n_mice = length(cd8.names), threshold = 0.75)
+
+
+## Plots for TCR sequences shared across mice ----------------------------------
+message("Plots for TCR sequences shared across mice")
 
 ##CD4 alpha
 tcr.cd4a.hist <- ggplot(tcr.cd4a, aes(x = count)) +
@@ -1164,7 +1183,7 @@ overall.tcr.freq.plot <- (tcr.cd4a.hist + tcr.cd4b.hist) / (tcr.cd8a.hist + tcr.
         plot.margin = unit(c(5, 10, 5, 5), "mm"))
 
 #save patchwork
-ggsave(here("Results", "Updated_plots", "TCR_frequencies.png"), overall.tcr.freq.plot, bg = "transparent", units = "cm", width = 55, height = 40)
+ggsave(here("Results", "Updated_plots", "Final_plots", "TCR_frequencies.png"), overall.tcr.freq.plot, bg = "transparent", units = "cm", width = 55, height = 40)
 
 
 ## Plot shared TCR sequences ---------------------------------------------------
