@@ -16,11 +16,13 @@ The repository currently contains top-level folders **`Code/`** and **`Data/`**,
 
 ## Repository structure
 
-Wild-mouse-TCR/
-├─ Code/        # R scripts / notebooks for data processing, analysis, and figure generation
-├─ Data/        # Small, tracked data assets (e.g., metadata templates, lookups, toy examples)
-├─ .gitignore
-└─ README.md
+| Path         | Description                                                    |
+|--------------|----------------------------------------------------------------|
+| `Code/`      | R scripts for data processing, analysis, and figure generation |
+| `Data/`      | Data assets                                                    |
+| `.gitignore` | Gitignore file                                                 |
+| `README.md`  | Project documentation (this file)                              |
+
 
 ---
 
